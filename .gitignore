@@ -1,0 +1,28 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# PyCharm / IDE
+.idea/
+
+# Node / frontend (pnpm)
+frontend/node_modules/
+frontend/dist/
+frontend/_extracted_preview/
+
+# Env files с секретами
+.env
+!.env.example
+
+# Логи, кэши
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Alembic временные
+backend/alembic/versions/__pycache__/
+infrastructure/_data/
