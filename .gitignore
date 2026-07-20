@@ -26,3 +26,4 @@ frontend/_extracted_preview/
 # Alembic временные
 backend/alembic/versions/__pycache__/
 infrastructure/_data/
+backend/storage/
