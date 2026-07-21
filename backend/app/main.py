@@ -3,12 +3,14 @@
 
 Роутеры по доменам подключаются здесь по мере готовности сессий:
 - auth (B03) — подключён
+- users (B04) — подключён
 - users, assets, tickets, orders, monitoring — в следующих сессиях
 """
 
 from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
+from app.api.users import router as users_router
 
 app = FastAPI(
     title="IT Infrastructure Platform API",
@@ -20,6 +22,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/health", tags=["system"])

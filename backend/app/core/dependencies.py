@@ -9,6 +9,7 @@ require_role(...) появится в сессии B04 (Users CRUD + ролев�
 здесь сознательно не добавляется, чтобы не выходить за рамки артефактов B03.
 """
 import uuid
+from app.models.user import User, UserRole
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -55,3 +56,20 @@ def get_current_user(
         )
 
     return user
+def require_role(*roles: UserRole):
+    """FastAPI-зависимость: разрешает доступ только пользователям с указанными ролями.
+
+    Использование: Depends(require_role(UserRole.ADMIN))
+    Кидает 403, если current_user.role не входит в переданный набор ролей.
+    Предполагает, что get_current_user уже выполнил 401-проверку (используется вместе с ней).
+    """
+
+    def _checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Недостаточно прав для выполнения операции",
+            )
+        return current_user
+
+    return _checker
