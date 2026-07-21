@@ -6,6 +6,7 @@
 import enum
 import uuid
 from datetime import date, datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import INET, UUID
@@ -20,6 +21,9 @@ class AssetStatus(str, enum.Enum):
     WRITTEN_OFF = "written_off"
     IN_STOCK = "in_stock"
 
+if TYPE_CHECKING:
+    from app.models.equipment_type import EquipmentType
+    from app.models.user import User
 
 class Asset(Base):
     __tablename__ = "asset"

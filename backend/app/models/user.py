@@ -5,6 +5,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -20,6 +21,8 @@ class UserRole(str, enum.Enum):
     EXECUTIVE = "Executive"
     USER = "User"
 
+if TYPE_CHECKING:
+    from app.models.department import Department
 
 class User(Base):
     __tablename__ = "user"

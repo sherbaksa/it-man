@@ -5,6 +5,7 @@ enum-тип Postgres document_template_type, что и у DocumentTemplate.type)
 import enum
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -21,6 +22,9 @@ class OrderStatus(str, enum.Enum):
     EXECUTED = "executed"
     REJECTED = "rejected"
 
+if TYPE_CHECKING:
+    from app.models.document_template import DocumentTemplate
+    from app.models.user import User
 
 class Order(Base):
     __tablename__ = "order"

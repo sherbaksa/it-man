@@ -1,6 +1,7 @@
 """Модель OrderHistory — история версий заявки Order (снапшоты fields при каждом изменении)."""
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -8,6 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
+if TYPE_CHECKING:
+    from app.models.order import Order
+    from app.models.user import User
 
 class OrderHistory(Base):
     __tablename__ = "order_history"

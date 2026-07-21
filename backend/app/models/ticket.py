@@ -5,6 +5,7 @@ merged_into_ticket_id — задел под правило слияния дуб
 import enum
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -32,6 +33,9 @@ class TicketSource(str, enum.Enum):
     MAX = "max"
     ZABBIX_AUTO = "zabbix_auto"
 
+if TYPE_CHECKING:
+    from app.models.asset import Asset
+    from app.models.user import User
 
 class Ticket(Base):
     __tablename__ = "ticket"

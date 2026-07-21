@@ -6,6 +6,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -25,6 +26,8 @@ class MonitoringSource(str, enum.Enum):
     ZABBIX = "zabbix"
     KASPERSKY = "kaspersky"
 
+if TYPE_CHECKING:
+    from app.models.asset import Asset
 
 class MonitoringStatus(Base):
     __tablename__ = "monitoring_status"

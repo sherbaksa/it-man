@@ -3,8 +3,9 @@ executor_espocrm_id пока nullable — привязка к EspoCRM появи
 """
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -19,6 +20,8 @@ class RepairStatus(str, enum.Enum):
     DONE = "done"
     CANCELLED = "cancelled"
 
+if TYPE_CHECKING:
+    from app.models.asset import Asset
 
 class Repair(Base):
     __tablename__ = "repair"

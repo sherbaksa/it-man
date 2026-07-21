@@ -1,6 +1,7 @@
 """Модель AuditLog — журнал аудита действий пользователей, по п. 3.10 ТЗ."""
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -8,6 +9,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
+if TYPE_CHECKING:
+    from app.models.user import User
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
