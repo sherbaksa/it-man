@@ -9,7 +9,6 @@ require_role(...) появится в сессии B04 (Users CRUD + ролев�
 здесь сознательно не добавляется, чтобы не выходить за рамки артефактов B03.
 """
 import uuid
-from app.models.user import User, UserRole
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_token
-from app.models.user import User
+from app.models.user import User, UserRole
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
