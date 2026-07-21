@@ -13,7 +13,7 @@
 """
 import secrets
 import string
-import sys
+
 from pathlib import Path
 
 from docx import Document
@@ -102,7 +102,7 @@ def create_stub_docx(path: Path, title: str) -> None:
     document = Document()
     document.add_heading(title, level=1)
     document.add_paragraph("Заглушка шаблона — реальные плейсхолдеры будут добавлены позже.")
-    document.save(path)
+    document.save(str(path))
 
 
 def seed_document_templates(db: Session) -> None:
@@ -157,4 +157,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

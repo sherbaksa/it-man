@@ -37,4 +37,4 @@ class Settings(BaseSettings):
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # pydantic-settings подставляет поля из .env в рантайме
