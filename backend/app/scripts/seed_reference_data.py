@@ -13,7 +13,6 @@
 """
 import secrets
 import string
-
 from pathlib import Path
 
 from docx import Document
