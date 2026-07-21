@@ -1,19 +1,25 @@
 """
 Точка входа FastAPI-приложения "Платформа управления IT-инфраструктурой".
 
-На этом этапе (сессия J01) — только скелет приложения с health-check
-эндпоинтом, чтобы поднять рабочий каркас через docker compose.
-Роутеры по доменам (auth, assets, tickets, orders, monitoring)
-будут подключаться в последующих сессиях (см. backend/app/api/).
+Роутеры по доменам подключаются здесь по мере готовности сессий:
+- auth (B03) — подключён
+- users, assets, tickets, orders, monitoring — в следующих сессиях
 """
 
 from fastapi import FastAPI
+
+from app.api.auth import router as auth_router
 
 app = FastAPI(
     title="IT Infrastructure Platform API",
     description="Веб-приложение для управления IT-инфраструктурой медицинской организации",
     version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
+
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["system"])

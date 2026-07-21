@@ -2,11 +2,8 @@
 Идемпотентен: повторный запуск не создаёт дублей — каждая запись проверяется
 по уникальному полю перед вставкой.
 
-Хеширование пароля: используется passlib[argon2] напрямую (сессия B03 ещё
-не создала общий app/core/security.py). Когда B03 будет сделана — с высокой
-вероятностью seed-админа придётся пересоздать/перехешировать пароль через
-общую функцию hash_password(), чтобы не было двух разных мест хеширования
-в проекте. Технический долг, снять на B03.
+Хеширование пароля: hash_password() из app.core.security (argon2id) —
+единая точка хеширования во всём проекте (техдолг снят в сессии B03).
 
 Запуск (внутри контейнера backend):
     python -m app.scripts.seed_reference_data
@@ -16,17 +13,15 @@ import string
 from pathlib import Path
 
 from docx import Document
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.core.security import hash_password
 from app.models.department import Department
 from app.models.document_template import DocumentTemplate, DocumentTemplateType
 from app.models.equipment_type import EquipmentType
 from app.models.user import User, UserRole
-
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "storage" / "document_templates"
 
@@ -84,7 +79,7 @@ def seed_admin_user(db: Session, it_department: Department) -> None:
         position="Системный администратор",
         role=UserRole.ADMIN,
         login="admin",
-        password_hash=pwd_context.hash(password),
+        password_hash=hash_password(password),
         is_active=True,
     )
     db.add(admin)
