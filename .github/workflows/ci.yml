@@ -33,8 +33,13 @@ jobs:
         run: mypy .
 
       - name: Pytest
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+          POSTGRES_HOST: localhost
+          SECRET_KEY: test-secret-key-for-ci-only
         run: pytest
-
   frontend:
     name: Frontend checks
     runs-on: ubuntu-latest
