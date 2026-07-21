@@ -8,6 +8,7 @@ import { closeTicket, deleteAttachment, getAttachmentBlob, getTickets, saveTicke
 import TicketForm from '../components/TicketForm'
 import { useAuthStore } from '../store/authStore'
 import type { Ticket, TicketAttachment, TicketFilters, TicketFormValues, TicketPriority, TicketStatus } from '../types/ticket'
+import { downloadBlob } from '../utils/downloadBlob'
 
 const statusColors = { new: 'blue', in_progress: 'gold', done: 'green', rejected: 'default' } as const
 const priorityColors = { low: 'default', medium: 'cyan', high: 'orange', critical: 'red' } as const
@@ -34,13 +35,13 @@ export default function Tickets() {
   const loadTickets = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await getTickets(filters)
+      const result = await getTickets({ ...filters, authorId: user.role === 'User' ? user.id : undefined })
       setItems(result.items)
       setTotal(result.total)
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filters, user.id, user.role])
 
   useEffect(() => { void loadTickets() }, [loadTickets])
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function Tickets() {
   const openForm = (ticket?: Ticket) => { setFormTicket(ticket ?? null); setFormOpen(true) }
   const save = async (values: TicketFormValues, files: File[]) => {
     setSaving(true)
-    const saved = await saveTicket(values, files, formTicket?.id)
+    const saved = await saveTicket(values, files, formTicket?.id, { id: user.id, fullName: user.fullName })
     setSaving(false); setFormOpen(false); setSelectedTicket(selectedTicket?.id === saved.id ? saved : selectedTicket); refresh()
     messageApi.success(formTicket ? 'Заявка обновлена' : `Создана заявка ${saved.number}`)
   }
@@ -93,7 +94,7 @@ export default function Tickets() {
   const downloadAttachment = (attachment: TicketAttachment) => {
     const blob = getAttachmentBlob(attachment.id)
     if (!blob) { messageApi.error('Локальный файл недоступен после перезапуска'); return }
-    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = attachment.fileName; link.click(); URL.revokeObjectURL(url)
+    downloadBlob(blob, attachment.fileName)
   }
 
   const pagination: TablePaginationConfig = { current: filters.page, pageSize: filters.pageSize, total, showSizeChanger: true, pageSizeOptions: [6, 12, 24], showTotal: (value: number) => `Всего: ${value}` }
@@ -101,17 +102,17 @@ export default function Tickets() {
   return (
     <div className="page-container tickets-page">
       {contextHolder}
-      <div className="page-heading"><div><span className="eyebrow">Service desk</span><h1>Заявки</h1><p>Регистрация обращений, назначение исполнителей и контроль решения</p></div><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>Новая заявка</Button></div>
+      <div className="page-heading"><div><span className="eyebrow">Service desk</span><h1>{user.role === 'User' ? 'Мои заявки' : 'Заявки'}</h1><p>{user.role === 'User' ? 'Создание обращений и просмотр статуса их выполнения' : 'Регистрация обращений, назначение исполнителей и контроль решения'}</p></div><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>Новая заявка</Button></div>
       <div className="prototype-notice">Локальный режим · заявки и вложения хранятся до обновления страницы</div>
       <Row gutter={[14, 14]} className="ticket-stats"><Col xs={12} lg={6}><Card><Statistic title="Найдено заявок" value={total} /></Card></Col><Col xs={12} lg={6}><Card><Statistic title="Новые" value={items.filter((item) => item.status === 'new').length} /></Card></Col><Col xs={12} lg={6}><Card><Statistic title="В работе" value={items.filter((item) => item.status === 'in_progress').length} /></Card></Col><Col xs={12} lg={6}><Card><Statistic title="Критические" value={items.filter((item) => item.priority === 'critical').length} /></Card></Col></Row>
       <Card className="workspace-card ticket-workspace">
-        <div className="ticket-filters"><Input allowClear prefix={<SearchOutlined />} placeholder="Номер, тема, автор или актив…" value={draftSearch} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraftSearch(event.target.value)} onPressEnter={() => updateFilters({ search: draftSearch || undefined })} /><Button type="primary" onClick={() => updateFilters({ search: draftSearch || undefined })}>Найти</Button><Select allowClear placeholder="Все статусы" value={filters.status} options={Object.entries(ticketStatusLabels).map(([value, label]) => ({ value, label }))} onChange={(status?: TicketStatus) => updateFilters({ status })} /><Select allowClear placeholder="Все приоритеты" value={filters.priority} options={Object.entries(ticketPriorityLabels).map(([value, label]) => ({ value, label }))} onChange={(priority?: TicketPriority) => updateFilters({ priority })} /><Select allowClear placeholder="Все исполнители" value={filters.assigneeId} options={ticketAssignees.map((person) => ({ value: person.id, label: person.fullName }))} onChange={(assigneeId?: string) => updateFilters({ assigneeId })} /><Button onClick={() => { setDraftSearch(''); setFilters(emptyFilters) }}>Сбросить</Button></div>
+        <div className="ticket-filters"><Input allowClear prefix={<SearchOutlined />} placeholder="Номер, тема, автор или актив…" value={draftSearch} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraftSearch(event.target.value)} onPressEnter={() => updateFilters({ search: draftSearch || undefined })} /><Button type="primary" onClick={() => updateFilters({ search: draftSearch || undefined })}>Найти</Button><Select allowClear placeholder="Все статусы" value={filters.status} options={Object.entries(ticketStatusLabels).map(([value, label]) => ({ value, label }))} onChange={(status?: TicketStatus) => updateFilters({ status })} /><Select allowClear placeholder="Все приоритеты" value={filters.priority} options={Object.entries(ticketPriorityLabels).map(([value, label]) => ({ value, label }))} onChange={(priority?: TicketPriority) => updateFilters({ priority })} />{user.role !== 'User' && <Select allowClear placeholder="Все исполнители" value={filters.assigneeId} options={ticketAssignees.map((person) => ({ value: person.id, label: person.fullName }))} onChange={(assigneeId?: string) => updateFilters({ assigneeId })} />}<Button onClick={() => { setDraftSearch(''); setFilters(emptyFilters) }}>Сбросить</Button></div>
         <Table<Ticket> rowKey="id" columns={columns} dataSource={items} loading={loading} pagination={pagination} scroll={{ x: 1160 }} onChange={(next: TablePaginationConfig) => setFilters((current) => ({ ...current, page: next.current ?? 1, pageSize: next.pageSize ?? current.pageSize }))} onRow={(ticket: Ticket) => ({ onClick: () => setSelectedTicket(ticket) })} rowClassName="ticket-table-row" />
       </Card>
-      <Drawer title={<div><span className="drawer-kicker">Карточка заявки</span><strong>{selectedTicket?.number}</strong></div>} width={720} open={Boolean(selectedTicket)} onClose={() => setSelectedTicket(undefined)} extra={selectedTicket && <Button icon={<EditOutlined />} onClick={() => openForm(selectedTicket)}>Редактировать</Button>}>
-        {selectedTicket && <><div className="ticket-card-header"><div><Tag color={priorityColors[selectedTicket.priority]}>{ticketPriorityLabels[selectedTicket.priority]}</Tag><Tag color={statusColors[selectedTicket.status]}>{ticketStatusLabels[selectedTicket.status]}</Tag></div><h2>{selectedTicket.title}</h2><p>{selectedTicket.description || 'Описание не добавлено'}</p></div><Descriptions column={1} bordered size="small"><Descriptions.Item label="Автор">{selectedTicket.author.fullName}</Descriptions.Item><Descriptions.Item label="Исполнитель">{selectedTicket.assignee?.fullName || 'Не назначен'}</Descriptions.Item><Descriptions.Item label="Актив">{selectedTicket.asset ? `${selectedTicket.asset.inventoryNumber} · ${selectedTicket.asset.model ?? ''}` : 'Не привязан'}</Descriptions.Item><Descriptions.Item label="Источник">{sourceLabels[selectedTicket.source]}</Descriptions.Item><Descriptions.Item label="Создана">{formatDateTime(selectedTicket.createdAt)}</Descriptions.Item><Descriptions.Item label="Решение">{selectedTicket.resolution || '—'}</Descriptions.Item></Descriptions><div className="ticket-attachments"><strong>Вложения ({selectedTicket.attachments.length})</strong>{selectedTicket.attachments.length ? selectedTicket.attachments.map((attachment) => <Button key={attachment.id} icon={<PaperClipOutlined />} onClick={() => downloadAttachment(attachment)}>{attachment.fileName}</Button>) : <span>Нет вложений</span>}</div>{selectedTicket.status !== 'done' && <Space className="ticket-actions" wrap>{selectedTicket.status === 'new' && <Button type="primary" icon={<UserSwitchOutlined />} onClick={() => void take()}>Взять в работу</Button>}<Button icon={<CheckOutlined />} onClick={() => setCloseOpen(true)}>Закрыть заявку</Button></Space>}</>}
+      <Drawer title={<div><span className="drawer-kicker">Карточка заявки</span><strong>{selectedTicket?.number}</strong></div>} width={720} open={Boolean(selectedTicket)} onClose={() => setSelectedTicket(undefined)} extra={selectedTicket && user.role !== 'User' && <Button icon={<EditOutlined />} onClick={() => openForm(selectedTicket)}>Редактировать</Button>}>
+        {selectedTicket && <><div className="ticket-card-header"><div><Tag color={priorityColors[selectedTicket.priority]}>{ticketPriorityLabels[selectedTicket.priority]}</Tag><Tag color={statusColors[selectedTicket.status]}>{ticketStatusLabels[selectedTicket.status]}</Tag></div><h2>{selectedTicket.title}</h2><p>{selectedTicket.description || 'Описание не добавлено'}</p></div><Descriptions column={1} bordered size="small"><Descriptions.Item label="Автор">{selectedTicket.author.fullName}</Descriptions.Item><Descriptions.Item label="Исполнитель">{selectedTicket.assignee?.fullName || 'Не назначен'}</Descriptions.Item><Descriptions.Item label="Актив">{selectedTicket.asset ? `${selectedTicket.asset.inventoryNumber} · ${selectedTicket.asset.model ?? ''}` : 'Не привязан'}</Descriptions.Item><Descriptions.Item label="Источник">{sourceLabels[selectedTicket.source]}</Descriptions.Item><Descriptions.Item label="Создана">{formatDateTime(selectedTicket.createdAt)}</Descriptions.Item><Descriptions.Item label="Решение">{selectedTicket.resolution || '—'}</Descriptions.Item></Descriptions><div className="ticket-attachments"><strong>Вложения ({selectedTicket.attachments.length})</strong>{selectedTicket.attachments.length ? selectedTicket.attachments.map((attachment) => <Button key={attachment.id} icon={<PaperClipOutlined />} onClick={() => downloadAttachment(attachment)}>{attachment.fileName}</Button>) : <span>Нет вложений</span>}</div>{selectedTicket.status !== 'done' && user.role !== 'User' && <Space className="ticket-actions" wrap>{selectedTicket.status === 'new' && <Button type="primary" icon={<UserSwitchOutlined />} onClick={() => void take()}>Взять в работу</Button>}<Button icon={<CheckOutlined />} onClick={() => setCloseOpen(true)}>Закрыть заявку</Button></Space>}</>}
       </Drawer>
-      <TicketForm open={formOpen} ticket={formTicket} saving={saving} onCancel={() => setFormOpen(false)} onSave={save} onDeleteAttachment={removeAttachment} onDownloadAttachment={downloadAttachment} />
+      <TicketForm open={formOpen} ticket={formTicket} saving={saving} requesterMode={user.role === 'User'} onCancel={() => setFormOpen(false)} onSave={save} onDeleteAttachment={removeAttachment} onDownloadAttachment={downloadAttachment} />
       <Modal title={`Закрытие ${selectedTicket?.number ?? ''}`} open={closeOpen} onCancel={() => setCloseOpen(false)} onOk={() => void close()} okText="Закрыть заявку" cancelText="Отмена"><Form form={resolutionForm} layout="vertical"><Form.Item name="resolution" label="Решение" rules={[{ required: true, whitespace: true, message: 'Опишите выполненное решение' }]}><Input.TextArea rows={5} maxLength={3000} showCount /></Form.Item></Form></Modal>
     </div>
   )

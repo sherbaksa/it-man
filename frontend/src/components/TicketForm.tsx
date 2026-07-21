@@ -11,6 +11,7 @@ interface TicketFormProps {
   open: boolean
   ticket?: Ticket | null
   saving: boolean
+  requesterMode?: boolean
   onCancel: () => void
   onSave: (values: TicketFormValues, files: File[]) => Promise<void>
   onDeleteAttachment: (attachment: TicketAttachment) => Promise<void>
@@ -19,7 +20,7 @@ interface TicketFormProps {
 
 const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} КБ` : `${(bytes / 1024 / 1024).toFixed(1)} МБ`
 
-export default function TicketForm({ open, ticket, saving, onCancel, onSave, onDeleteAttachment, onDownloadAttachment }: TicketFormProps) {
+export default function TicketForm({ open, ticket, saving, requesterMode = false, onCancel, onSave, onDeleteAttachment, onDownloadAttachment }: TicketFormProps) {
   const [form] = Form.useForm<TicketFormValues>()
   const [files, setFiles] = useState<File[]>([])
   const [assetOptions, setAssetOptions] = useState<{ value: string; label: string }[]>([])
@@ -68,7 +69,7 @@ export default function TicketForm({ open, ticket, saving, onCancel, onSave, onD
         <Form.Item name="description" label="Описание"><Input.TextArea rows={4} maxLength={3000} showCount placeholder="Что произошло и что уже пробовали сделать" /></Form.Item>
         <div className="ticket-form-grid">
           <Form.Item name="priority" label="Приоритет" rules={[{ required: true }]}><Select options={Object.entries(ticketPriorityLabels).map(([value, label]) => ({ value: value as TicketPriority, label }))} /></Form.Item>
-          <Form.Item name="assigneeId" label="Исполнитель"><Select allowClear placeholder="Не назначен" options={ticketAssignees.map((person) => ({ value: person.id, label: person.fullName }))} /></Form.Item>
+          {!requesterMode && <Form.Item name="assigneeId" label="Исполнитель"><Select allowClear placeholder="Не назначен" options={ticketAssignees.map((person) => ({ value: person.id, label: person.fullName }))} /></Form.Item>}
         </div>
         <Form.Item name="assetId" label="Связанный актив"><Select allowClear showSearch filterOption={false} loading={assetLoading} placeholder="Начните вводить инвентарный номер или модель" options={assetOptions} onSearch={(value) => void searchAssets(value)} onFocus={() => { if (!assetOptions.length) void searchAssets('') }} /></Form.Item>
         <Form.Item label={`Вложения · до ${MAX_ATTACHMENT_SIZE_MB} МБ`} extra="Разрешены изображения, PDF, DOC и DOCX">

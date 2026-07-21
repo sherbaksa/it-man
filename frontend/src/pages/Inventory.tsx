@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { assetLocations, assetStatusLabels, assetTypes, exportAssets, getAssets, saveAsset } from '../api/assets'
 import AssetCard from '../components/AssetCard'
 import type { Asset, AssetFilters, AssetFormValues, AssetStatus } from '../types/asset'
+import { downloadBlob } from '../utils/downloadBlob'
 
 const statusColors = { in_use: 'green', repair: 'gold', written_off: 'default', in_stock: 'cyan' } as const
 const emptyFilters: AssetFilters = { page: 1, pageSize: 8 }
@@ -78,14 +79,13 @@ export default function Inventory() {
   }
 
   const downloadReport = async () => {
-    const blob = await exportAssets(filters)
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `assets-${new Date().toISOString().slice(0, 10)}.xlsx`
-    link.click()
-    URL.revokeObjectURL(url)
-    messageApi.success('Отчёт Excel сформирован')
+    try {
+      const blob = await exportAssets(filters)
+      downloadBlob(blob, `assets-${new Date().toISOString().slice(0, 10)}.xlsx`)
+      messageApi.success('Отчёт Excel сформирован')
+    } catch {
+      messageApi.error('Не удалось сформировать отчёт Excel')
+    }
   }
 
   const pagination: TablePaginationConfig = { current: filters.page, pageSize: filters.pageSize, total, showSizeChanger: true, pageSizeOptions: [8, 16, 32], showTotal: (value: number) => `Всего: ${value}` }

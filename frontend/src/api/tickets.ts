@@ -12,11 +12,12 @@ export const ticketAssignees: TicketPerson[] = [
 
 const attachmentContent = new Map<string, Blob>()
 const demoPng = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='), (character) => character.charCodeAt(0))
-const demoAttachment: TicketAttachment = { id: 'attachment-1', fileName: 'printer-photo.png', contentType: 'image/png', sizeBytes: demoPng.byteLength, uploadedBy: { id: 'user-1', fullName: 'Сотрудник 01' }, createdAt: '2026-07-16T01:30:00Z' }
+const demoUser: TicketPerson = { id: 'mock-user', fullName: 'Сотрудник Тестовый' }
+const demoAttachment: TicketAttachment = { id: 'attachment-1', fileName: 'printer-photo.png', contentType: 'image/png', sizeBytes: demoPng.byteLength, uploadedBy: demoUser, createdAt: '2026-07-16T01:30:00Z' }
 attachmentContent.set(demoAttachment.id, new Blob([demoPng], { type: demoAttachment.contentType }))
 
 let tickets: Ticket[] = [
-  { id: 'ticket-1', number: 'INC-1250', title: 'Не печатает принтер в кабинете 205', description: 'Принтер включён, но задания остаются в очереди.', priority: 'high', status: 'new', author: { id: 'user-1', fullName: 'Сотрудник 01' }, asset: { id: 'asset-1', inventoryNumber: 'INV-00231', model: 'HP LaserJet Pro M404dn' }, source: 'web', createdAt: '2026-07-16T01:20:00Z', attachments: [demoAttachment] },
+  { id: 'ticket-1', number: 'INC-1250', title: 'Не печатает принтер в кабинете 205', description: 'Принтер включён, но задания остаются в очереди.', priority: 'high', status: 'new', author: demoUser, asset: { id: 'asset-1', inventoryNumber: 'INV-00231', model: 'HP LaserJet Pro M404dn' }, source: 'web', createdAt: '2026-07-16T01:20:00Z', attachments: [demoAttachment] },
   { id: 'ticket-2', number: 'INC-1249', title: 'Настройка рабочего места врача', description: 'Подключить компьютер, МИС и сетевой принтер.', priority: 'medium', status: 'in_progress', author: { id: 'user-2', fullName: 'Сотрудник 02' }, assignee: ticketAssignees[0], asset: { id: 'asset-12', inventoryNumber: 'INV-00241', model: 'Aquarius Pro P30' }, source: 'max', createdAt: '2026-07-15T23:45:00Z', attachments: [] },
   { id: 'ticket-3', number: 'INC-1248', title: 'Нет доступа к сетевой папке', priority: 'medium', status: 'new', author: { id: 'user-3', fullName: 'Сотрудник 03' }, source: 'max', createdAt: '2026-07-15T06:10:00Z', attachments: [] },
   { id: 'ticket-4', number: 'INC-1247', title: 'Недоступен сервер архива', description: 'Zabbix зафиксировал недоступность узла.', priority: 'critical', status: 'in_progress', author: { id: 'system', fullName: 'Zabbix' }, assignee: ticketAssignees[1], asset: { id: 'asset-6', inventoryNumber: 'INV-00236', model: 'Dell PowerEdge R540' }, source: 'zabbix_auto', createdAt: '2026-07-14T22:05:00Z', attachments: [] },
@@ -34,24 +35,24 @@ export async function getTickets(filters: TicketFilters): Promise<TicketListResp
   const search = filters.search?.trim().toLocaleLowerCase('ru')
   const filtered = tickets.filter((ticket) => {
     const matchesSearch = !search || [ticket.number, ticket.title, ticket.description, ticket.author.fullName, ticket.asset?.inventoryNumber].some((value) => value?.toLocaleLowerCase('ru').includes(search))
-    return matchesSearch && (!filters.status || ticket.status === filters.status) && (!filters.priority || ticket.priority === filters.priority) && (!filters.assigneeId || ticket.assignee?.id === filters.assigneeId)
+    return matchesSearch && (!filters.status || ticket.status === filters.status) && (!filters.priority || ticket.priority === filters.priority) && (!filters.assigneeId || ticket.assignee?.id === filters.assigneeId) && (!filters.authorId || ticket.author.id === filters.authorId)
   })
   const start = (filters.page - 1) * filters.pageSize
   return { items: filtered.slice(start, start + filters.pageSize), total: filtered.length }
 }
 
-export async function saveTicket(values: TicketFormValues, files: File[], id?: string): Promise<Ticket> {
+export async function saveTicket(values: TicketFormValues, files: File[], id?: string, author?: TicketPerson): Promise<Ticket> {
   await wait()
   const existing = tickets.find((ticket) => ticket.id === id)
   const asset = await getAssetById(values.assetId)
   const createdAttachments: TicketAttachment[] = files.map((file, index) => {
-    const attachment: TicketAttachment = { id: `attachment-${Date.now()}-${index}`, fileName: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size, uploadedBy: ticketAssignees[0], createdAt: new Date().toISOString() }
+    const attachment: TicketAttachment = { id: `attachment-${Date.now()}-${index}`, fileName: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size, uploadedBy: author ?? ticketAssignees[0], createdAt: new Date().toISOString() }
     attachmentContent.set(attachment.id, file)
     return attachment
   })
   const next: Ticket = {
     id: existing?.id ?? `ticket-${Date.now()}`, number: existing?.number ?? nextNumber(), title: values.title.trim(), description: values.description?.trim() || undefined,
-    priority: values.priority, status: existing?.status ?? 'new', author: existing?.author ?? ticketAssignees[0], assignee: ticketAssignees.find((person) => person.id === values.assigneeId),
+    priority: values.priority, status: existing?.status ?? 'new', author: existing?.author ?? author ?? ticketAssignees[0], assignee: ticketAssignees.find((person) => person.id === values.assigneeId),
     asset: asset ? { id: asset.id, inventoryNumber: asset.inventoryNumber, model: asset.model } : undefined, resolution: existing?.resolution, source: existing?.source ?? 'web',
     createdAt: existing?.createdAt ?? new Date().toISOString(), closedAt: existing?.closedAt, attachments: [...(existing?.attachments ?? []), ...createdAttachments],
   }

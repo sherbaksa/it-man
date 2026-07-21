@@ -43,6 +43,7 @@ export interface TicketFilters {
   status?: TicketStatus
   priority?: TicketPriority
   assigneeId?: string
+  authorId?: string
 }
 
 export interface TicketListResponse {
