@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -62,7 +63,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=True,
+        secure=settings.REFRESH_COOKIE_SECURE,
         samesite="strict",
         path=REFRESH_COOKIE_PATH,
         max_age=settings.JWT_REFRESH_TTL_DAYS * 24 * 60 * 60,
@@ -132,3 +133,8 @@ def refresh(
 def logout(response: Response) -> None:
     """Очищает refresh_token cookie."""
     response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+
+@router.get("/me", response_model=UserPublic)
+def get_me(current_user: User = Depends(get_current_user)) -> UserPublic:
+    """Текущий пользователь по access-токену — для восстановления профиля после reload страницы."""
+    return UserPublic(id=current_user.id, role=current_user.role, full_name=current_user.full_name)
