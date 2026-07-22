@@ -33,10 +33,9 @@ function getInitials(fullName: string) {
     .join('') || 'П'
 }
 
-function toAuthUser(user: UserPublic, login = ''): AuthUser {
+function toAuthUser(user: UserPublic): AuthUser {
   return {
     id: user.id,
-    login,
     fullName: user.full_name,
     role: user.role,
     position: rolePositions[user.role],
@@ -87,7 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data } = await apiClient.post<LoginResponse>('/api/auth/login', payload)
       setApiAccessToken(data.access_token)
       set({
-        user: toAuthUser(data.user, payload.login.trim()),
+        user: toAuthUser(data.user),
         accessToken: data.access_token,
         isAuthenticated: true,
         isInitialized: true,

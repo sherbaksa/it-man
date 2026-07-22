@@ -5,7 +5,6 @@ export type Role = components['schemas']['UserRole']
 
 export interface AuthUser {
   id: string
-  login: string
   fullName: string
   role: Role
   position: string

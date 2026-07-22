@@ -12,8 +12,8 @@ import Login from '../pages/Login'
 import Tickets from '../pages/Tickets'
 import { downloadBlob } from '../utils/downloadBlob'
 
-const engineer = { id: 'mock-engineer', login: 'engineer', fullName: 'Инженер Тестовый', role: 'Engineer' as const, position: 'IT-инженер', initials: 'ИТ' }
-const requester = { id: 'mock-user', login: 'user', fullName: 'Сотрудник Тестовый', role: 'User' as const, position: 'Сотрудник', initials: 'СТ' }
+const engineer = { id: 'mock-engineer', fullName: 'Инженер Тестовый', role: 'Engineer' as const, position: 'IT-инженер', initials: 'ИТ' }
+const requester = { id: 'mock-user', fullName: 'Сотрудник Тестовый', role: 'User' as const, position: 'Сотрудник', initials: 'СТ' }
 
 beforeEach(() => useAuthStore.setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false, isInitialized: true }))
 
