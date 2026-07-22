@@ -15,6 +15,7 @@ frontend/_extracted_preview/
 
 # Env files с секретами
 .env
+.env.*
 !.env.example
 
 # Логи, кэши

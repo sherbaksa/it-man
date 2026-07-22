@@ -1,16 +1,14 @@
-/** Author: Dev2 | Date: 2026-07-16 | Purpose: Shared mock-auth contracts compatible with the future API. */
-export type Role = 'Admin' | 'IT-Head' | 'Engineer' | 'Executive' | 'User'
+/** Author: Dev2 | Date: 2026-07-22 | Purpose: UI auth model derived from the generated backend contract. */
+import type { components } from '../api/types'
+
+export type Role = components['schemas']['UserRole']
 
 export interface AuthUser {
   id: string
-  login: string
   fullName: string
   role: Role
   position: string
   initials: string
 }
 
-export interface LoginPayload {
-  login: string
-  password: string
-}
+export type LoginPayload = components['schemas']['LoginRequest']
