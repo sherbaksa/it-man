@@ -23,3 +23,6 @@ def export_openapi() -> None:
         encoding="utf-8",
     )
     print(f"OpenAPI-схема сохранена: {OUTPUT_PATH}")
+
+if __name__ == "__main__":
+    export_openapi()
