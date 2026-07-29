@@ -23,6 +23,8 @@ class AssetStatus(str, enum.Enum):
 
 if TYPE_CHECKING:
     from app.models.equipment_type import EquipmentType
+    from app.models.movement import Movement
+    from app.models.repair import Repair
     from app.models.user import User
 
 class Asset(Base):
@@ -59,6 +61,11 @@ class Asset(Base):
 
     ip_address: Mapped[str | None] = mapped_column(INET, nullable=True, index=True)
     hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    movements: Mapped[list["Movement"]] = relationship(
+        back_populates="asset", order_by="Movement.moved_at.desc()"
+    )
+    repairs: Mapped[list["Repair"]] = relationship(back_populates="asset")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)

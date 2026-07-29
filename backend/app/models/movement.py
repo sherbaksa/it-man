@@ -29,7 +29,7 @@ class Movement(Base):
     asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("asset.id"), nullable=False
     )
-    asset: Mapped["Asset"] = relationship()
+    asset: Mapped["Asset"] = relationship(back_populates="movements")
 
     from_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     to_location: Mapped[str] = mapped_column(String(255), nullable=False)

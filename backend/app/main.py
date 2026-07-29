@@ -4,12 +4,14 @@
 Роутеры по доменам подключаются здесь по мере готовности сессий:
 - auth (B03) — подключён
 - users (B04) — подключён
-- users, assets, tickets, orders, monitoring — в следующих сессиях
+- assets (B06) — подключён
+- tickets, orders, monitoring — в следующих сессиях
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.assets import router as assets_router
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
 from app.core.config import settings
@@ -33,6 +35,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(assets_router)
 
 
 @app.get("/health", tags=["system"])

@@ -36,7 +36,7 @@ class Repair(Base):
     asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("asset.id"), nullable=False
     )
-    asset: Mapped["Asset"] = relationship()
+    asset: Mapped["Asset"] = relationship(back_populates="repairs")
 
     repair_type: Mapped[str] = mapped_column(String(150), nullable=False)
     cost: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
