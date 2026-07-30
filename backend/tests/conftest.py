@@ -23,7 +23,9 @@ from app.core.config import settings
 from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app as fastapi_app
+from app.models.asset import Asset, AssetStatus
 from app.models.department import Department
+from app.models.equipment_type import EquipmentType
 from app.models.user import User, UserRole
 
 # Тестовая БД — отдельное имя на том же сервере Postgres, чтобы не задеть dev-данные.
@@ -140,3 +142,24 @@ def engineer_user(db_session: Session, department: Department) -> User:
     db_session.commit()
     db_session.refresh(user)
     return user
+
+@pytest.fixture()
+def equipment_type(db_session: Session) -> EquipmentType:
+    eq_type = EquipmentType(name="Компьютер (тест)")
+    db_session.add(eq_type)
+    db_session.commit()
+    db_session.refresh(eq_type)
+    return eq_type
+
+
+@pytest.fixture()
+def asset(db_session: Session, equipment_type: EquipmentType) -> Asset:
+    item = Asset(
+        inventory_number="INV-TEST-0001",
+        type_id=equipment_type.id,
+        status=AssetStatus.IN_STOCK,
+    )
+    db_session.add(item)
+    db_session.commit()
+    db_session.refresh(item)
+    return item

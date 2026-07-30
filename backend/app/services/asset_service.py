@@ -147,11 +147,11 @@ def update_asset(
     """Частично обновляет актив (PATCH-семантика — только переданные поля).
 
     Если среди переданных полей есть status и/или location, и хотя бы одно из них
-    реально меняет значение — атомарно (в той же транзакции) создаётся запись
-    Movement(from_location=<до изменения>, to_location=<после изменения>,
-    initiator_id=<текущий пользователь>). Это покрывает оба случая из п. 3.2 ТЗ:
-    переезд актива и смену статуса без переезда (Movement в этом случае фиксирует
-    состояние location на момент смены статуса, а не сам переезд).
+    реально меняет значение, и у актива на момент изменения есть непустой location —
+    атомарно (в той же транзакции) создаётся запись Movement(from_location=<до>,
+    to_location=<после>, initiator_id=<текущий пользователь>). Если location у актива
+    не задан (None) — запись Movement не создаётся, т.к. to_location NOT NULL в БД
+    (нечего фиксировать: актив "переезжает в никуда").
 
     Если data.status == written_off и по активу есть открытые заявки — поднимает
     AssetHasOpenTicketsError, никаких изменений в БД не производится (проверка
@@ -173,7 +173,7 @@ def update_asset(
     location_changed = "location" in update_data and asset.location != old_location
     status_changed = "status" in update_data and asset.status != old_status
 
-    if location_changed or status_changed:
+    if location_changed or status_changed and asset.location is not None:
         db.add(
             Movement(
                 asset_id=asset.id,
