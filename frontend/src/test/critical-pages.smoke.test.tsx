@@ -100,6 +100,32 @@ describe('critical frontend pages', () => {
   })
 
   it('loads the inventory table from the replaceable adapter', async () => {
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/api/equipment-types') {
+        return { data: [{ id: 'type-id', name: 'Принтер' }] }
+      }
+      return {
+        data: {
+          items: [{
+            id: 'asset-id',
+            inventory_number: 'INV-00231',
+            type: { id: 'type-id', name: 'Принтер' },
+            serial_number: 'SN-HPM404-7841',
+            model: 'HP LaserJet Pro M404dn',
+            purchase_date: '2020-01-15',
+            status: 'in_use',
+            location: 'Кабинет 205',
+            responsible_user: null,
+            ip_address: null,
+            hostname: 'print-205',
+            monitoring_status: null,
+            created_at: '2026-07-16T04:00:00Z',
+            updated_at: '2026-07-16T04:00:00Z',
+          }],
+          total: 1,
+        },
+      }
+    })
     render(<Inventory />)
     expect(screen.getByRole('heading', { name: 'Инвентаризация' })).toBeInTheDocument()
     expect(await screen.findByText('INV-00231', {}, { timeout: 2000 })).toBeInTheDocument()

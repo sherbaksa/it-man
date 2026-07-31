@@ -1,14 +1,25 @@
-/** Author: Dev2 | Date: 2026-07-16 | Purpose: Local assets adapter matching future paginated API behavior. */
-import type { Asset, AssetFilters, AssetFormValues, AssetListResponse, AssetStatus, AssetType } from '../types/asset'
-import * as XLSX from 'xlsx'
+/** Author: Dev2 | Date: 2026-07-31 | Purpose: Real backend adapter for the inventory API. */
+import { apiClient } from './client'
+import type { components } from './types'
+import type {
+  Asset,
+  AssetFilters,
+  AssetFormValues,
+  AssetListResponse,
+  AssetLookups,
+  AssetStatus,
+  Movement,
+  Repair,
+} from '../types/asset'
 
-export const assetTypes: AssetType[] = [
-  { id: 'computer', name: 'Компьютер' },
-  { id: 'printer', name: 'Принтер' },
-  { id: 'network', name: 'Сетевое оборудование' },
-  { id: 'server', name: 'Сервер' },
-  { id: 'other', name: 'Прочее' },
-]
+type ApiAssetCreate = components['schemas']['AssetCreate']
+type ApiAssetDetail = components['schemas']['AssetDetail']
+type ApiAssetListResponse = components['schemas']['AssetListResponse']
+type ApiAssetRead = components['schemas']['AssetRead']
+type ApiAssetUpdate = components['schemas']['AssetUpdate']
+type ApiEquipmentType = components['schemas']['EquipmentTypeRead']
+type ApiMovement = components['schemas']['MovementBrief']
+type ApiRepair = components['schemas']['RepairBrief']
 
 export const assetStatusLabels: Record<AssetStatus, string> = {
   in_use: 'В работе',
@@ -17,108 +28,134 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
   in_stock: 'На складе',
 }
 
-export const assetLocations = ['Архив', 'Бухгалтерия', 'Кабинет 101', 'Кабинет 205', 'Кабинет 206', 'Кабинет 312', 'Поликлиника, 2 этаж', 'Регистратура', 'Серверная', 'Склад IT']
+function mapMovement(item: ApiMovement): Movement {
+  return {
+    id: item.id,
+    fromLocation: item.from_location ?? undefined,
+    toLocation: item.to_location,
+    initiatorName: item.initiator.full_name,
+    movedAt: item.moved_at,
+    comment: item.comment ?? undefined,
+  }
+}
 
-const now = '2026-07-16T04:00:00.000Z'
-let assets: Asset[] = [
-  ['asset-1', 'INV-00231', 'printer', 'HP LaserJet Pro M404dn', 'SN-HPM404-7841', 'Кабинет 205', 'in_use', 'Ответственный 01', '198.51.100.31', 'print-205'],
-  ['asset-2', 'INV-00232', 'computer', 'Aquarius Pro P30', 'AQ-P30-1182', 'Регистратура', 'in_use', 'Ответственный 02', '198.51.100.14', 'reg-02'],
-  ['asset-3', 'INV-00233', 'printer', 'Pantum M7100DN', 'PT-M7100-0419', 'Склад IT', 'in_stock', '', '', ''],
-  ['asset-4', 'INV-00234', 'network', 'MikroTik CRS326-24G', 'MT-CRS-2208', 'Серверная', 'in_use', 'Инженер Тестовый', '192.0.2.5', 'switch-core-02'],
-  ['asset-5', 'INV-00235', 'computer', 'Depo Neos MF4', 'DP-MF4-5520', 'Кабинет 312', 'repair', 'Ответственный 03', '', 'pc-312-01'],
-  ['asset-6', 'INV-00236', 'server', 'Dell PowerEdge R540', 'DE-R540-9981', 'Серверная', 'in_use', 'Инженер Тестовый', '192.0.2.11', 'archive-01'],
-  ['asset-7', 'INV-00105', 'printer', 'HP LaserJet P1102', 'SN-P1102-0101', 'Архив', 'written_off', '', '', ''],
-  ['asset-8', 'INV-00237', 'other', 'ИБП APC Smart-UPS 1500', 'APC-1500-7732', 'Серверная', 'in_use', 'Инженер Тестовый', '192.0.2.21', 'ups-main'],
-  ['asset-9', 'INV-00238', 'computer', 'IRU Office 310', 'IRU-310-4221', 'Кабинет 101', 'in_stock', '', '', ''],
-  ['asset-10', 'INV-00239', 'network', 'TP-Link EAP660 HD', 'TPL-660-8301', 'Поликлиника, 2 этаж', 'in_use', 'Ответственный 04', '203.0.113.20', 'wifi-pol-2'],
-  ['asset-11', 'INV-00240', 'printer', 'Kyocera ECOSYS M2040dn', 'KYO-2040-0074', 'Бухгалтерия', 'repair', 'Ответственный 05', '', 'print-buh-01'],
-  ['asset-12', 'INV-00241', 'computer', 'Aquarius Pro P30', 'AQ-P30-1220', 'Кабинет 206', 'in_use', 'Ответственный 06', '198.51.100.32', 'pc-206-01'],
-].map(([id, inventoryNumber, typeId, model, serialNumber, location, status, responsibleName, ipAddress, hostname], index) => ({
-  id,
-  inventoryNumber,
-  type: assetTypes.find((type) => type.id === typeId)!,
-  model,
-  serialNumber,
-  purchaseDate: `202${index % 5}-0${(index % 8) + 1}-15`,
-  location,
-  status: status as AssetStatus,
-  responsibleUser: responsibleName ? { id: responsibleName === 'Инженер Тестовый' ? 'mock-engineer' : `user-${index}`, fullName: responsibleName } : undefined,
-  ipAddress: ipAddress || undefined,
-  hostname: hostname || undefined,
-  createdAt: now,
-  updatedAt: now,
-  movements: index % 3 === 0 ? [{ id: `movement-${index}`, fromLocation: 'Склад IT', toLocation: location, initiatorName: 'Инженер Тестовый', movedAt: `2026-0${(index % 6) + 1}-12T06:30:00Z`, comment: 'Передача в эксплуатацию' }] : [],
-  repairs: status === 'repair' ? [{ id: `repair-${index}`, openedAt: '2026-07-12T02:15:00Z', description: 'Диагностика неисправности оборудования' }] : [],
-}))
+function mapRepair(item: ApiRepair): Repair {
+  return {
+    id: item.id,
+    repairType: item.repair_type,
+    cost: item.cost ?? undefined,
+    executor: item.executor ?? undefined,
+    status: item.status,
+    startedAt: item.started_at ?? undefined,
+    finishedAt: item.finished_at ?? undefined,
+  }
+}
 
-const wait = () => new Promise((resolve) => window.setTimeout(resolve, 250))
+function mapAsset(item: ApiAssetRead | ApiAssetDetail): Asset {
+  const detail = item as ApiAssetDetail
+  return {
+    id: item.id,
+    inventoryNumber: item.inventory_number,
+    type: item.type,
+    serialNumber: item.serial_number ?? undefined,
+    model: item.model ?? undefined,
+    purchaseDate: item.purchase_date ?? undefined,
+    status: item.status,
+    location: item.location ?? undefined,
+    responsibleUser: item.responsible_user
+      ? { id: item.responsible_user.id, fullName: item.responsible_user.full_name }
+      : undefined,
+    ipAddress: item.ip_address ?? undefined,
+    hostname: item.hostname ?? undefined,
+    monitoringStatus: item.monitoring_status?.status,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+    movements: detail.movements?.map(mapMovement) ?? [],
+    repairs: detail.repairs?.map(mapRepair) ?? [],
+  }
+}
+
+function toQuery(filters: AssetFilters, includePagination = true) {
+  return {
+    status: filters.status,
+    type_id: filters.typeId,
+    location: filters.location,
+    search: filters.search?.trim() || undefined,
+    ...(includePagination ? { page: filters.page, page_size: filters.pageSize } : {}),
+  }
+}
 
 export async function getAssets(filters: AssetFilters): Promise<AssetListResponse> {
-  await wait()
-  const search = filters.search?.trim().toLocaleLowerCase('ru')
-  const filtered = assets.filter((asset) => {
-    const matchesSearch = !search || [asset.inventoryNumber, asset.model, asset.serialNumber, asset.hostname, asset.responsibleUser?.fullName].some((value) => value?.toLocaleLowerCase('ru').includes(search))
-    return matchesSearch && (!filters.status || asset.status === filters.status) && (!filters.typeId || asset.type.id === filters.typeId) && (!filters.location || asset.location === filters.location) && (!filters.responsibleUserId || asset.responsibleUser?.id === filters.responsibleUserId)
+  const { data } = await apiClient.get<ApiAssetListResponse>('/api/assets', {
+    params: toQuery(filters),
   })
-  const start = (filters.page - 1) * filters.pageSize
-  return { items: filtered.slice(start, start + filters.pageSize), total: filtered.length }
+  return { items: data.items.map(mapAsset), total: data.total }
 }
 
 export async function getAssetById(id?: string): Promise<Asset | undefined> {
-  await wait()
-  return assets.find((asset) => asset.id === id)
+  if (!id) return undefined
+  const { data } = await apiClient.get<ApiAssetDetail>(`/api/assets/${id}`)
+  return mapAsset(data)
 }
 
 export async function saveAsset(values: AssetFormValues, id?: string): Promise<Asset> {
-  await wait()
-  const existing = assets.find((asset) => asset.id === id)
-  const type = assetTypes.find((item) => item.id === values.typeId)!
-  const next: Asset = {
-    id: existing?.id ?? `asset-${Date.now()}`,
-    inventoryNumber: values.inventoryNumber.trim(), type,
-    serialNumber: values.serialNumber?.trim() || undefined, model: values.model?.trim() || undefined,
-    purchaseDate: values.purchaseDate || undefined, status: values.status,
-    location: values.location?.trim() || undefined,
-    responsibleUser: values.responsibleName?.trim() ? { id: existing?.responsibleUser?.id ?? `user-${Date.now()}`, fullName: values.responsibleName.trim() } : undefined,
-    ipAddress: values.ipAddress?.trim() || undefined, hostname: values.hostname?.trim() || undefined,
-    createdAt: existing?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(),
-    movements: existing?.movements ?? [], repairs: existing?.repairs ?? [],
+  const commonFields = {
+    inventory_number: values.inventoryNumber.trim(),
+    type_id: values.typeId,
+    serial_number: values.serialNumber?.trim() || null,
+    model: values.model?.trim() || null,
+    purchase_date: values.purchaseDate || null,
+    location: values.location?.trim() || null,
   }
-  assets = existing ? assets.map((asset) => asset.id === id ? next : asset) : [next, ...assets]
-  return next
+
+  if (id) {
+    const payload: ApiAssetUpdate = {
+      ...commonFields,
+      status: values.status,
+      ip_address: values.ipAddress?.trim() || null,
+      hostname: values.hostname?.trim() || null,
+    }
+    const { data } = await apiClient.patch<ApiAssetDetail>(`/api/assets/${id}`, payload)
+    return mapAsset(data)
+  }
+
+  const createPayload: ApiAssetCreate = commonFields
+  const { data: created } = await apiClient.post<ApiAssetRead>('/api/assets', createPayload)
+  const needsFollowUp = values.status !== 'in_stock' || Boolean(values.ipAddress?.trim()) || Boolean(values.hostname?.trim())
+
+  if (needsFollowUp) {
+    const payload: ApiAssetUpdate = {
+      status: values.status,
+      ip_address: values.ipAddress?.trim() || null,
+      hostname: values.hostname?.trim() || null,
+    }
+    const { data } = await apiClient.patch<ApiAssetDetail>(`/api/assets/${created.id}`, payload)
+    return mapAsset(data)
+  }
+
+  return (await getAssetById(created.id)) ?? mapAsset(created)
 }
 
-export function createAssetWorkbook(items: Asset[]): ArrayBuffer {
-  const rows = items.map((asset) => [
-    asset.inventoryNumber,
-    asset.type.name,
-    asset.model ?? '',
-    asset.serialNumber ?? '',
-    assetStatusLabels[asset.status],
-    asset.location ?? '',
-    asset.responsibleUser?.fullName ?? '',
-    asset.purchaseDate ?? '',
-    asset.hostname ?? '',
-    asset.ipAddress ?? '',
+export async function getAssetLookups(): Promise<AssetLookups> {
+  const [{ data: types }, { data: assets }] = await Promise.all([
+    apiClient.get<ApiEquipmentType[]>('/api/equipment-types'),
+    apiClient.get<ApiAssetListResponse>('/api/assets', {
+      params: { page: 1, page_size: 100 },
+    }),
   ])
-  const worksheet = XLSX.utils.aoa_to_sheet([
-    ['Инвентарный номер', 'Тип', 'Модель', 'Серийный номер', 'Статус', 'Расположение', 'Ответственный', 'Дата приобретения', 'Hostname', 'IP-адрес'],
-    ...rows,
-  ])
-  worksheet['!cols'] = [
-    { wch: 20 }, { wch: 24 }, { wch: 28 }, { wch: 22 }, { wch: 14 },
-    { wch: 24 }, { wch: 24 }, { wch: 18 }, { wch: 20 }, { wch: 16 },
-  ]
-  worksheet['!autofilter'] = { ref: worksheet['!ref'] ?? 'A1:J1' }
-
-  const workbook = XLSX.utils.book_new()
-  workbook.Props = { Title: 'Отчёт по инвентаризации', Subject: 'Активы IT-инфраструктуры', Author: 'IT Management' }
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Инвентаризация')
-  return XLSX.write(workbook, { bookType: 'xlsx', type: 'array', compression: true }) as ArrayBuffer
+  const locations = Array.from(
+    new Set(assets.items.map((item) => item.location).filter((value): value is string => Boolean(value))),
+  ).sort((left, right) => left.localeCompare(right, 'ru'))
+  return {
+    types,
+    locations,
+  }
 }
 
 export async function exportAssets(filters: AssetFilters): Promise<Blob> {
-  const result = await getAssets({ ...filters, page: 1, pageSize: 10_000 })
-  const content = createAssetWorkbook(result.items)
-  return new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const { data } = await apiClient.get<Blob>('/api/assets/export', {
+    params: toQuery(filters, false),
+    responseType: 'blob',
+  })
+  return data
 }

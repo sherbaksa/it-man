@@ -127,6 +127,164 @@ export interface paths {
         patch: operations["update_user_api_users__user_id__patch"];
         trace?: never;
     };
+    "/api/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assets */
+        get: operations["get_assets_api_assets_get"];
+        put?: never;
+        /** Create Asset */
+        post: operations["create_asset_api_assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Assets
+         * @description Те же фильтры, что у GET /api/assets, но без пагинации — .xlsx-отчёт целиком.
+         */
+        get: operations["export_assets_api_assets_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/{asset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Asset */
+        get: operations["get_asset_api_assets__asset_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Asset
+         * @description Мягкое удаление: переводит актив в status=written_off через тот же сервис,
+         *     что и PATCH — с той же проверкой правила об открытых заявках и с той же
+         *     автозаписью Movement. Роль — IT-Head/Admin (уже, чем общий Engineer+ роутера).
+         */
+        delete: operations["delete_asset_api_assets__asset_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch Asset
+         * @description Роль — Engineer+ (уже обеспечено dependencies роутера).
+         */
+        patch: operations["patch_asset_api_assets__asset_id__patch"];
+        trace?: never;
+    };
+    "/api/equipment-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Equipment Types */
+        get: operations["get_equipment_types_api_equipment_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/{asset_id}/repairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Asset Repairs */
+        get: operations["get_asset_repairs_api_assets__asset_id__repairs_get"];
+        put?: never;
+        /** Create Asset Repair */
+        post: operations["create_asset_repair_api_assets__asset_id__repairs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repairs/{repair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Repair */
+        patch: operations["patch_repair_api_repairs__repair_id__patch"];
+        trace?: never;
+    };
+    "/api/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tickets */
+        get: operations["get_tickets_api_tickets_get"];
+        put?: never;
+        /** Create Ticket */
+        post: operations["create_ticket_api_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ticket */
+        get: operations["get_ticket_api_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Ticket
+         * @description Роль Engineer+ уже обеспечена dependencies роутера; точечная проверка
+         *     "Engineer — только свои назначенные" выполняется внутри ticket_service,
+         *     т.к. зависит от assignee_id конкретной заявки.
+         */
+        patch: operations["patch_ticket_api_tickets__ticket_id__patch"];
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -156,6 +314,166 @@ export interface components {
             /** Access Token */
             access_token: string;
         };
+        /** AssetCreate */
+        AssetCreate: {
+            /** Inventory Number */
+            inventory_number: string;
+            /**
+             * Type Id
+             * Format: uuid
+             */
+            type_id: string;
+            /** Serial Number */
+            serial_number?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Purchase Date */
+            purchase_date?: string | null;
+            /** Location */
+            location?: string | null;
+        };
+        /**
+         * AssetDetail
+         * @description Ответ GET /api/assets/{id} — расширяет AssetRead историей перемещений и ремонтов.
+         */
+        AssetDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Inventory Number */
+            inventory_number: string;
+            type: components["schemas"]["EquipmentTypeBrief"];
+            /** Serial Number */
+            serial_number: string | null;
+            /** Model */
+            model: string | null;
+            /** Purchase Date */
+            purchase_date: string | null;
+            status: components["schemas"]["AssetStatus"];
+            /** Location */
+            location: string | null;
+            responsible_user: components["schemas"]["ResponsibleUserBrief"] | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /** Hostname */
+            hostname: string | null;
+            monitoring_status?: components["schemas"]["MonitoringStatusBrief"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Movements */
+            movements: components["schemas"]["MovementBrief"][];
+            /** Repairs */
+            repairs: components["schemas"]["RepairBrief"][];
+        };
+        /**
+         * AssetListResponse
+         * @description Обёртка для GET /api/assets — {items, total} по п. 4.2 ТЗ.
+         */
+        AssetListResponse: {
+            /** Items */
+            items: components["schemas"]["AssetRead"][];
+            /** Total */
+            total: number;
+        };
+        /** AssetRead */
+        AssetRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Inventory Number */
+            inventory_number: string;
+            type: components["schemas"]["EquipmentTypeBrief"];
+            /** Serial Number */
+            serial_number: string | null;
+            /** Model */
+            model: string | null;
+            /** Purchase Date */
+            purchase_date: string | null;
+            status: components["schemas"]["AssetStatus"];
+            /** Location */
+            location: string | null;
+            responsible_user: components["schemas"]["ResponsibleUserBrief"] | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /** Hostname */
+            hostname: string | null;
+            monitoring_status?: components["schemas"]["MonitoringStatusBrief"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AssetStatus
+         * @enum {string}
+         */
+        AssetStatus: "in_use" | "repair" | "written_off" | "in_stock";
+        /**
+         * AssetUpdate
+         * @description Полный набор опциональных полей — используется PATCH-эндпоинтом в сессии B07.
+         */
+        AssetUpdate: {
+            /** Inventory Number */
+            inventory_number?: string | null;
+            /** Type Id */
+            type_id?: string | null;
+            /** Serial Number */
+            serial_number?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Purchase Date */
+            purchase_date?: string | null;
+            status?: components["schemas"]["AssetStatus"] | null;
+            /** Location */
+            location?: string | null;
+            /** Responsible User Id */
+            responsible_user_id?: string | null;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Hostname */
+            hostname?: string | null;
+        };
+        /**
+         * EquipmentTypeBrief
+         * @description Вложенный тип оборудования — только id/name, без лишних полей.
+         */
+        EquipmentTypeBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** EquipmentTypeRead */
+        EquipmentTypeRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -173,6 +491,230 @@ export interface components {
             /** Access Token */
             access_token: string;
             user: components["schemas"]["UserPublic"];
+        };
+        /**
+         * MonitoringStatusBrief
+         * @description Заглушка под мониторинг (появится в B11-B13). Пока не используется в сервисном слое.
+         */
+        MonitoringStatusBrief: {
+            /** Status */
+            status: string;
+        };
+        /** MovementBrief */
+        MovementBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** From Location */
+            from_location: string | null;
+            /** To Location */
+            to_location: string;
+            initiator: components["schemas"]["ResponsibleUserBrief"];
+            /**
+             * Moved At
+             * Format: date-time
+             */
+            moved_at: string;
+            /** Comment */
+            comment: string | null;
+        };
+        /** RepairBrief */
+        RepairBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Repair Type */
+            repair_type: string;
+            /** Cost */
+            cost: string | null;
+            /** Executor */
+            executor: string | null;
+            status: components["schemas"]["RepairStatus"];
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /** RepairCreate */
+        RepairCreate: {
+            /** Repair Type */
+            repair_type: string;
+            /** Cost */
+            cost?: number | string | null;
+            /** Executor */
+            executor?: string | null;
+            /** Started At */
+            started_at?: string | null;
+        };
+        /** RepairRead */
+        RepairRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Repair Type */
+            repair_type: string;
+            /** Cost */
+            cost: string | null;
+            /** Executor */
+            executor: string | null;
+            /** Executor Espocrm Id */
+            executor_espocrm_id: string | null;
+            status: components["schemas"]["RepairStatus"];
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+        };
+        /**
+         * RepairStatus
+         * @enum {string}
+         */
+        RepairStatus: "planned" | "in_progress" | "done" | "cancelled";
+        /**
+         * RepairUpdate
+         * @description Частичное обновление ремонта. Передавая status, инициируем переход —
+         *     допустимые переходы: planned→in_progress→done/cancelled (см. repair_service).
+         */
+        RepairUpdate: {
+            /** Repair Type */
+            repair_type?: string | null;
+            /** Cost */
+            cost?: number | string | null;
+            /** Executor */
+            executor?: string | null;
+            /** Executor Espocrm Id */
+            executor_espocrm_id?: string | null;
+            status?: components["schemas"]["RepairStatus"] | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * ResponsibleUserBrief
+         * @description Вложенный ответственный пользователь — минимальный набор полей для отображения.
+         */
+        ResponsibleUserBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+        };
+        /**
+         * TicketAssetBrief
+         * @description Вложенный актив — минимальный набор полей, без полной карточки оборудования.
+         */
+        TicketAssetBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Inventory Number */
+            inventory_number: string;
+            /** Model */
+            model: string | null;
+        };
+        /** TicketCreate */
+        TicketCreate: {
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** @default medium */
+            priority: components["schemas"]["TicketPriority"];
+            /** Asset Id */
+            asset_id?: string | null;
+        };
+        /**
+         * TicketListResponse
+         * @description Обёртка для GET /api/tickets — {items, total} по аналогии с AssetListResponse.
+         */
+        TicketListResponse: {
+            /** Items */
+            items: components["schemas"]["TicketRead"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * TicketPersonBrief
+         * @description Вложенный автор/исполнитель — минимальный набор полей для отображения.
+         */
+        TicketPersonBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+        };
+        /**
+         * TicketPriority
+         * @enum {string}
+         */
+        TicketPriority: "low" | "medium" | "high" | "critical";
+        /** TicketRead */
+        TicketRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            priority: components["schemas"]["TicketPriority"];
+            status: components["schemas"]["TicketStatus"];
+            author: components["schemas"]["TicketPersonBrief"];
+            assignee: components["schemas"]["TicketPersonBrief"] | null;
+            asset: components["schemas"]["TicketAssetBrief"] | null;
+            /** Resolution */
+            resolution: string | null;
+            source: components["schemas"]["TicketSource"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Closed At */
+            closed_at: string | null;
+        };
+        /**
+         * TicketSource
+         * @enum {string}
+         */
+        TicketSource: "web" | "max" | "zabbix_auto";
+        /**
+         * TicketStatus
+         * @enum {string}
+         */
+        TicketStatus: "new" | "in_progress" | "done" | "rejected";
+        /**
+         * TicketUpdate
+         * @description Частичное обновление — используется PATCH-эндпоинтом.
+         */
+        TicketUpdate: {
+            status?: components["schemas"]["TicketStatus"] | null;
+            /** Assignee Id */
+            assignee_id?: string | null;
+            /** Resolution */
+            resolution?: string | null;
         };
         /** UserCreate */
         UserCreate: {
@@ -521,6 +1063,459 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_assets_api_assets_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["AssetStatus"] | null;
+                type_id?: string | null;
+                location?: string | null;
+                search?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_asset_api_assets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_assets_api_assets_export_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["AssetStatus"] | null;
+                type_id?: string | null;
+                location?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_asset_api_assets__asset_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_asset_api_assets__asset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_asset_api_assets__asset_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_equipment_types_api_equipment_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentTypeRead"][];
+                };
+            };
+        };
+    };
+    get_asset_repairs_api_assets__asset_id__repairs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepairRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_asset_repair_api_assets__asset_id__repairs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepairRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_repair_api_repairs__repair_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepairRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tickets_api_tickets_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["TicketStatus"] | null;
+                assignee_id?: string | null;
+                priority?: components["schemas"]["TicketPriority"] | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ticket_api_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ticket_api_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_ticket_api_tickets__ticket_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketRead"];
                 };
             };
             /** @description Validation Error */

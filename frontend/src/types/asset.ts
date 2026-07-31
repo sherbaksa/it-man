@@ -1,5 +1,6 @@
 /** Author: Dev2 | Date: 2026-07-16 | Purpose: Inventory contracts shaped for the future assets API. */
 export type AssetStatus = 'in_use' | 'repair' | 'written_off' | 'in_stock'
+export type RepairStatus = 'planned' | 'in_progress' | 'done' | 'cancelled'
 
 export interface AssetType {
   id: string
@@ -22,10 +23,12 @@ export interface Movement {
 
 export interface Repair {
   id: string
-  openedAt: string
-  closedAt?: string
-  description: string
-  result?: string
+  repairType: string
+  cost?: string
+  executor?: string
+  status: RepairStatus
+  startedAt?: string
+  finishedAt?: string
 }
 
 export interface Asset {
@@ -40,6 +43,7 @@ export interface Asset {
   responsibleUser?: ResponsibleUser
   ipAddress?: string
   hostname?: string
+  monitoringStatus?: string
   createdAt: string
   updatedAt: string
   movements: Movement[]
@@ -69,7 +73,11 @@ export interface AssetFormValues {
   purchaseDate?: string
   status: AssetStatus
   location?: string
-  responsibleName?: string
   ipAddress?: string
   hostname?: string
+}
+
+export interface AssetLookups {
+  types: AssetType[]
+  locations: string[]
 }
