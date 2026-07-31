@@ -7,6 +7,7 @@
 - assets (B06) — подключён
 - repairs (B08) — подключён
 - tickets (B09) — подключён
+- equipment-types (B09a) — подключён
 - orders, monitoring — в следующих сессиях
 """
 
@@ -15,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.assets import router as assets_router
 from app.api.auth import router as auth_router
+from app.api.equipment_types import router as equipment_types_router
 from app.api.repairs import router as repairs_router
 from app.api.tickets import router as tickets_router
 from app.api.users import router as users_router
@@ -40,6 +42,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(assets_router)
+app.include_router(equipment_types_router)
 app.include_router(repairs_router)
 app.include_router(tickets_router)
 
