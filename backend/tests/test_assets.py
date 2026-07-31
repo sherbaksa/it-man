@@ -106,6 +106,32 @@ def test_patch_asset_location_creates_movement(
     assert body["movements"][0]["to_location"] == "Каб. 305"
     assert body["movements"][0]["from_location"] is None
 
+def test_patch_asset_clear_location_does_not_create_movement(
+    client: TestClient, engineer_user: User, asset: Asset
+) -> None:
+    """Регресс-тест на баг из ревью Dev2 (после B08): из-за приоритета `and` над `or`
+    в условии `location_changed or status_changed and asset.location is not None`
+    очистка существующего location (PATCH {"location": null}) приводила к попытке
+    создать Movement(to_location=None) при NOT NULL в БД. Сценарий: сначала задаём
+    location (создаёт Movement №1), затем очищаем его — должно пройти 200 и НЕ
+    создать второй Movement с пустым to_location."""
+    first = client.patch(
+        f"/api/assets/{asset.id}",
+        json={"location": "Каб. 100"},
+        headers=_auth_headers(engineer_user),
+    )
+    assert first.status_code == 200
+
+    response = client.patch(
+        f"/api/assets/{asset.id}",
+        json={"location": None},
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["location"] is None
+    assert len(body["movements"]) == 1  # только от первого изменения, не от очистки
 
 def test_delete_asset_forbidden_for_engineer(
     client: TestClient, engineer_user: User, asset: Asset

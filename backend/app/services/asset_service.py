@@ -173,7 +173,7 @@ def update_asset(
     location_changed = "location" in update_data and asset.location != old_location
     status_changed = "status" in update_data and asset.status != old_status
 
-    if location_changed or status_changed and asset.location is not None:
+    if (location_changed or status_changed) and asset.location is not None:
         db.add(
             Movement(
                 asset_id=asset.id,
