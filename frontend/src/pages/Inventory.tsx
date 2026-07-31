@@ -1,11 +1,12 @@
-/** Author: Dev2 | Date: 2026-07-16 | Purpose: Paginated inventory workspace backed by a replaceable local API adapter. */
+/** Author: Dev2 | Date: 2026-07-31 | Purpose: Paginated inventory workspace backed by the real platform API. */
 import { DownloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Card, Col, Form, Input, Modal, Row, Select, Space, Statistic, Table, Tag, message } from 'antd'
 import type { TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
-import { assetLocations, assetStatusLabels, assetTypes, exportAssets, getAssets, saveAsset } from '../api/assets'
+import { assetStatusLabels, exportAssets, getAssetById, getAssetLookups, getAssets, saveAsset } from '../api/assets'
+import { getApiErrorMessage } from '../api/client'
 import AssetCard from '../components/AssetCard'
-import type { Asset, AssetFilters, AssetFormValues, AssetStatus } from '../types/asset'
+import type { Asset, AssetFilters, AssetFormValues, AssetStatus, AssetType } from '../types/asset'
 import { downloadBlob } from '../utils/downloadBlob'
 
 const statusColors = { in_use: 'green', repair: 'gold', written_off: 'default', in_stock: 'cyan' } as const
@@ -16,7 +17,10 @@ export default function Inventory() {
   const [draftSearch, setDraftSearch] = useState('')
   const [items, setItems] = useState<Asset[]>([])
   const [total, setTotal] = useState(0)
+  const [assetTypes, setAssetTypes] = useState<AssetType[]>([])
+  const [assetLocations, setAssetLocations] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [cardLoading, setCardLoading] = useState(false)
   const [selectedAsset, setSelectedAsset] = useState<Asset>()
   const [formAsset, setFormAsset] = useState<Asset | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -30,14 +34,37 @@ export default function Inventory() {
       const result = await getAssets(filters)
       setItems(result.items)
       setTotal(result.total)
-    } catch {
-      messageApi.error('Не удалось загрузить список активов')
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error, 'Не удалось загрузить список активов'))
     } finally {
       setLoading(false)
     }
   }, [filters, messageApi])
 
   useEffect(() => { void loadAssets() }, [loadAssets])
+
+  useEffect(() => {
+    void getAssetLookups()
+      .then((lookups) => {
+        setAssetTypes(lookups.types)
+        setAssetLocations(lookups.locations)
+      })
+      .catch((error: unknown) => {
+        messageApi.warning(getApiErrorMessage(error, 'Не удалось загрузить справочные значения'))
+      })
+  }, [messageApi])
+
+  const openAsset = async (asset: Asset) => {
+    setCardLoading(true)
+    try {
+      const detail = await getAssetById(asset.id)
+      if (detail) setSelectedAsset(detail)
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error, 'Не удалось загрузить карточку актива'))
+    } finally {
+      setCardLoading(false)
+    }
+  }
 
   const columns: TableColumnsType<Asset> = [
     { title: 'Инв. номер', dataIndex: 'inventoryNumber', width: 135, sorter: (a, b) => a.inventoryNumber.localeCompare(b.inventoryNumber), render: (value: string) => <strong className="inventory-number">{value}</strong> },
@@ -57,7 +84,7 @@ export default function Inventory() {
     form.setFieldsValue(asset ? {
       inventoryNumber: asset.inventoryNumber, typeId: asset.type.id, serialNumber: asset.serialNumber,
       model: asset.model, purchaseDate: asset.purchaseDate, status: asset.status, location: asset.location,
-      responsibleName: asset.responsibleUser?.fullName, ipAddress: asset.ipAddress, hostname: asset.hostname,
+      ipAddress: asset.ipAddress, hostname: asset.hostname,
     } : { inventoryNumber: '', status: 'in_stock' })
     setFormOpen(true)
   }
@@ -72,7 +99,7 @@ export default function Inventory() {
       await loadAssets()
       messageApi.success(formAsset ? 'Карточка актива обновлена' : 'Актив добавлен')
     } catch (error) {
-      if (error instanceof Error) messageApi.error('Не удалось сохранить актив')
+      if (error instanceof Error) messageApi.error(getApiErrorMessage(error, 'Не удалось сохранить актив'))
     } finally {
       setSaving(false)
     }
@@ -83,8 +110,8 @@ export default function Inventory() {
       const blob = await exportAssets(filters)
       downloadBlob(blob, `assets-${new Date().toISOString().slice(0, 10)}.xlsx`)
       messageApi.success('Отчёт Excel сформирован')
-    } catch {
-      messageApi.error('Не удалось сформировать отчёт Excel')
+    } catch (error) {
+      messageApi.error(getApiErrorMessage(error, 'Не удалось сформировать отчёт Excel'))
     }
   }
 
@@ -94,7 +121,7 @@ export default function Inventory() {
     <div className="page-container inventory-page">
       {contextHolder}
       <div className="page-heading"><div><span className="eyebrow">Учёт оборудования</span><h1>Инвентаризация</h1><p>Активы, размещение, ответственные и техническое состояние</p></div><Space wrap><Button icon={<DownloadOutlined />} onClick={() => void downloadReport()}>Скачать отчёт .xlsx</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>Добавить актив</Button></Space></div>
-      <div className="prototype-notice">Локальный режим · фильтрация и постраничная загрузка имитируют будущий API</div>
+      <div className="prototype-notice">Данные загружаются из API платформы · фильтрация и пагинация выполняются на сервере</div>
       <Row gutter={[14, 14]} className="inventory-stats">
         <Col xs={12} lg={6}><Card><Statistic title="Найдено активов" value={total} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="На этой странице" value={items.length} /></Card></Col>
@@ -110,16 +137,16 @@ export default function Inventory() {
           <Select allowClear showSearch placeholder="Все расположения" value={filters.location} options={assetLocations.map((location) => ({ value: location, label: location }))} onChange={(location?: string) => updateFilters({ location })} />
           <Button onClick={() => { setDraftSearch(''); setFilters(emptyFilters) }}>Сбросить</Button>
         </div>
-        <Table<Asset> rowKey="id" columns={columns} dataSource={items} loading={loading} pagination={pagination} scroll={{ x: 1120 }} onChange={(next: TablePaginationConfig) => setFilters((current) => ({ ...current, page: next.current ?? 1, pageSize: next.pageSize ?? current.pageSize }))} onRow={(asset: Asset) => ({ onClick: () => setSelectedAsset(asset) })} rowClassName="inventory-row" />
+        <Table<Asset> rowKey="id" columns={columns} dataSource={items} loading={loading || cardLoading} pagination={pagination} scroll={{ x: 1120 }} onChange={(next: TablePaginationConfig) => setFilters((current) => ({ ...current, page: next.current ?? 1, pageSize: next.pageSize ?? current.pageSize }))} onRow={(asset: Asset) => ({ onClick: () => void openAsset(asset) })} rowClassName="inventory-row" />
       </Card>
       <AssetCard asset={selectedAsset} open={Boolean(selectedAsset)} onClose={() => setSelectedAsset(undefined)} onEdit={(asset) => openForm(asset)} />
       <Modal title={formAsset ? `Редактирование ${formAsset.inventoryNumber}` : 'Новый актив'} open={formOpen} onCancel={() => setFormOpen(false)} onOk={() => void submitForm()} confirmLoading={saving} okText="Сохранить" cancelText="Отмена" width={720}>
         <Form form={form} layout="vertical" className="asset-form">
           <Form.Item name="inventoryNumber" label="Инвентарный номер" rules={[{ required: true, message: 'Укажите инвентарный номер' }, { max: 50 }]}><Input placeholder="INV-00001" /></Form.Item>
-          <Form.Item name="typeId" label="Тип оборудования" rules={[{ required: true, message: 'Выберите тип' }]}><Select options={assetTypes.map((type) => ({ value: type.id, label: type.name }))} /></Form.Item>
+          <Form.Item name="typeId" label="Тип оборудования" extra={assetTypes.length ? undefined : 'Справочник типов оборудования пуст.'} rules={[{ required: true, message: 'Выберите тип' }]}><Select options={assetTypes.map((type) => ({ value: type.id, label: type.name }))} /></Form.Item>
           <Form.Item name="status" label="Статус" rules={[{ required: true }]}><Select options={Object.entries(assetStatusLabels).map(([value, label]) => ({ value, label }))} /></Form.Item>
           <Form.Item name="model" label="Модель"><Input /></Form.Item><Form.Item name="serialNumber" label="Серийный номер"><Input /></Form.Item><Form.Item name="purchaseDate" label="Дата приобретения"><Input type="date" /></Form.Item>
-          <Form.Item name="location" label="Расположение"><Input placeholder="Кабинет или подразделение" /></Form.Item><Form.Item name="responsibleName" label="Ответственный"><Input placeholder="ФИО" /></Form.Item><Form.Item name="hostname" label="Hostname"><Input /></Form.Item>
+          <Form.Item name="location" label="Расположение"><Input placeholder="Кабинет или подразделение" /></Form.Item><Form.Item label="Ответственный" extra="Назначение ответственного будет доступно после появления ролевого справочника пользователей."><Input value={formAsset?.responsibleUser?.fullName} disabled placeholder="Не назначен" /></Form.Item><Form.Item name="hostname" label="Hostname"><Input /></Form.Item>
           <Form.Item name="ipAddress" label="IP-адрес" rules={[{ pattern: /^(?:\d{1,3}\.){3}\d{1,3}$/, message: 'Введите IPv4-адрес' }]}><Input placeholder="192.0.2.10" /></Form.Item>
         </Form>
       </Modal>
