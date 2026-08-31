@@ -9,6 +9,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Секрет для аутентификации входящих интеграционных вебхуков (n8n/Zabbix/OpenProject)
+    # и /api/my/tickets (доступ MAX-бота) — заголовок X-Webhook-Secret, см. п. 4.6 ТЗ
+    WEBHOOK_SECRET: str
+
     # PostgreSQL
     POSTGRES_HOST: str = "db"
     POSTGRES_PORT: int = 5432

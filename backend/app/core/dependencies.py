@@ -10,10 +10,11 @@ require_role(...) появится в сессии B04 (Users CRUD + ролев�
 """
 import uuid
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models.user import User, UserRole
@@ -72,3 +73,17 @@ def require_role(*roles: UserRole):
         return current_user
 
     return _checker
+
+
+def verify_webhook_secret(x_webhook_secret: str | None = Header(default=None)) -> None:
+    """Проверяет заголовок X-Webhook-Secret против settings.WEBHOOK_SECRET — см. п. 4.6 ТЗ.
+
+    Используется для интеграционных вебхуков (n8n/Zabbix/OpenProject, появятся в B18)
+    и для /api/my/tickets (B10) — доступ MAX-бота, минуя обычную JWT-аутентификацию.
+    401, если заголовок отсутствует или не совпадает с ожидаемым секретом.
+    """
+    if x_webhook_secret is None or x_webhook_secret != settings.WEBHOOK_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный или отсутствующий X-Webhook-Secret",
+        )

@@ -806,6 +806,125 @@
         ]
       }
     },
+    "/api/my/tickets": {
+      "get": {
+        "tags": [
+          "my-tickets"
+        ],
+        "summary": "Get My Tickets",
+        "operationId": "get_my_tickets_api_my_tickets_get",
+        "parameters": [
+          {
+            "name": "max_user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "message.sender.user_id из MAX",
+              "title": "Max User Id"
+            },
+            "description": "message.sender.user_id из MAX"
+          },
+          {
+            "name": "full_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "message.sender.name из MAX",
+              "title": "Full Name"
+            },
+            "description": "message.sender.name из MAX"
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Телефон, если известен (обычно отсутствует)",
+              "title": "Phone"
+            },
+            "description": "Телефон, если известен (обычно отсутствует)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "x-webhook-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/assets/{asset_id}/repairs": {
       "get": {
         "tags": [

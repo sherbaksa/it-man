@@ -53,6 +53,7 @@ jobs:
           POSTGRES_DB: test
           POSTGRES_HOST: localhost
           SECRET_KEY: test-secret-key-for-ci-only
+          WEBHOOK_SECRET: test-webhook-secret-for-ci-only
         run: pytest
   frontend:
     name: Frontend checks

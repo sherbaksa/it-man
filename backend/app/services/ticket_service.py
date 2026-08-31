@@ -1,7 +1,8 @@
 """
 Сервисный слой для Ticket — по п. 3.5 и п. 4.3 ТЗ, сессия B09 посессионного плана.
 
-list_tickets() — листинг с фильтрами (status, assignee_id, priority) и пагинацией.
+list_tickets() — листинг с фильтрами (status, assignee_id, priority, author_id)
+    и пагинацией. author_id добавлен в B10 — используется /api/my/tickets.
 get_ticket() — получение одной заявки с подгруженными author/assignee/asset.
 create_ticket() — создание заявки пользовательским (веб) путём: source всегда
     проставляется как WEB здесь, а не приходит из TicketCreate (см. обсуждение
@@ -42,6 +43,7 @@ def _apply_filters(
     status: TicketStatus | None,
     assignee_id: uuid.UUID | None,
     priority: TicketPriority | None,
+    author_id: uuid.UUID | None = None,
 ) -> Any:
     """Применяет общий набор фильтров и к count-запросу, и к запросу за данными —
     чтобы условия не расходились между total и items (по аналогии с asset_service)."""
@@ -51,6 +53,8 @@ def _apply_filters(
         query = query.where(Ticket.assignee_id == assignee_id)
     if priority is not None:
         query = query.where(Ticket.priority == priority)
+    if author_id is not None:
+        query = query.where(Ticket.author_id == author_id)
     return query
 
 
@@ -60,6 +64,7 @@ def list_tickets(
     status: TicketStatus | None = None,
     assignee_id: uuid.UUID | None = None,
     priority: TicketPriority | None = None,
+    author_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> tuple[list[Ticket], int]:
@@ -68,7 +73,7 @@ def list_tickets(
 
     count_query = _apply_filters(
         select(func.count()).select_from(Ticket),
-        status=status, assignee_id=assignee_id, priority=priority,
+        status=status, assignee_id=assignee_id, priority=priority, author_id=author_id,
     )
     total = db.execute(count_query).scalar_one()
 
@@ -77,7 +82,9 @@ def list_tickets(
         selectinload(Ticket.assignee),
         selectinload(Ticket.asset),
     )
-    query = _apply_filters(query, status=status, assignee_id=assignee_id, priority=priority)
+    query = _apply_filters(
+        query, status=status, assignee_id=assignee_id, priority=priority, author_id=author_id,
+    )
     query = query.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     items = list(db.execute(query).scalars().all())
 
