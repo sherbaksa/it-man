@@ -75,7 +75,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
     """Проверяет логин/пароль, выдаёт access_token в теле ответа и refresh_token в cookie."""
     user = db.scalar(select(User).where(User.login == payload.login))
 
-    if user is None or not verify_password(payload.password, user.password_hash):
+    if user is None or user.password_hash is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный логин или пароль")
 
     if not user.is_active:
