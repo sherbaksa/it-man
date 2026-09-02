@@ -34,3 +34,10 @@ ruff==0.6.9
 mypy==1.11.2
 
 email-validator==2.2.0
+
+
+# Файловое хранилище вложений (MinIO, S3-совместимое)
+minio==7.2.9
+
+# Приём multipart/form-data (загрузка файлов через UploadFile)
+python-multipart==0.0.9

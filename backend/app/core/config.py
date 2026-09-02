@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     # (прод: https://it.example-hospital.ru; локально: http://127.0.0.1:3000)
     CORS_ORIGINS: str = ""
 
+    # MinIO (вложения к заявкам, сессия B10a)
+    MINIO_ROOT_USER: str
+    MINIO_ROOT_PASSWORD: str
+    MINIO_ENDPOINT: str = "minio:9000"
+    MINIO_PUBLIC_ENDPOINT: str = "http://127.0.0.1:9000"
+    MINIO_SECURE: bool = False
+    MINIO_BUCKET_TICKETS: str = "tickets-attachments"
+    MAX_ATTACHMENT_SIZE_MB: int = 10
     # Secure-флаг refresh-cookie: True по умолчанию (требование ТЗ раздел 7 для прода),
     # False — только для локальной разработки по HTTP без TLS
     REFRESH_COOKIE_SECURE: bool = True
