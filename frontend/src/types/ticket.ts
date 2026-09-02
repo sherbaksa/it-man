@@ -15,8 +15,9 @@ export interface TicketAttachment {
   fileName: string
   contentType: string
   sizeBytes: number
-  uploadedBy: TicketPerson
+  downloadUrl: string
   createdAt: string
+  canDelete: boolean
 }
 
 export interface Ticket {
@@ -39,11 +40,9 @@ export interface Ticket {
 export interface TicketFilters {
   page: number
   pageSize: number
-  search?: string
   status?: TicketStatus
   priority?: TicketPriority
   assigneeId?: string
-  authorId?: string
 }
 
 export interface TicketListResponse {

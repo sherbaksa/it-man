@@ -34,7 +34,7 @@ const technicalRoles: Role[] = ['Admin', 'IT-Head', 'Engineer']
 
 const menuDefinitions: MenuDefinition[] = [
   { key: '/', label: 'Главная', icon: <HomeOutlined />, roles: staffRoles },
-  { key: '/tickets', label: 'Заявки', icon: <AppstoreOutlined />, roles: ['Admin', 'IT-Head', 'Engineer', 'User'] },
+  { key: '/tickets', label: 'Заявки', icon: <AppstoreOutlined />, roles: ['Admin', 'IT-Head', 'Engineer'] },
   { key: '/inventory', label: 'Инвентаризация', icon: <LaptopOutlined />, roles: technicalRoles },
   { key: '/maintenance', label: 'Обслуживание', icon: <ToolOutlined />, roles: technicalRoles },
   { key: '/orders', label: 'Документы ОРД', icon: <FileTextOutlined />, roles: staffRoles },

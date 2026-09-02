@@ -133,24 +133,20 @@ describe('critical frontend pages', () => {
 
   it('loads the ticket queue for an authenticated engineer', async () => {
     useAuthStore.setState({ user: engineer, accessToken: 'test-access-token', isAuthenticated: true })
+    vi.spyOn(apiClient, 'get').mockImplementation(async (url) => {
+      if (url === '/api/ticket-assignees') return { data: [{ id: engineer.id, full_name: engineer.fullName }] }
+      return { data: { items: [{ id: '12345678-1234-1234-1234-123456789abc', title: 'Проверить принтер', description: null, priority: 'high', status: 'new', author: { id: 'author-id', full_name: 'Автор Тестовый' }, assignee: null, asset: null, resolution: null, source: 'web', created_at: '2026-09-02T01:00:00Z', closed_at: null }], total: 1 } }
+    })
     render(<MemoryRouter><Tickets /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Заявки' })).toBeInTheDocument()
-    expect(await screen.findByText('INC-1250', {}, { timeout: 2000 })).toBeInTheDocument()
+    expect(await screen.findByText('Заявка 12345678', {}, { timeout: 2000 })).toBeInTheDocument()
   })
 
-  it('redirects a requester dashboard to their own tickets', async () => {
+  it('redirects a web requester role to login because backend web auth forbids it', async () => {
     useAuthStore.setState({ user: requester, accessToken: 'test-access-token', isAuthenticated: true })
-    render(<MemoryRouter initialEntries={['/']}><Routes><Route path="/" element={<Dashboard />} /><Route path="/tickets" element={<div>Личные заявки</div>} /></Routes></MemoryRouter>)
-    expect(await screen.findByText('Личные заявки')).toBeInTheDocument()
+    render(<MemoryRouter initialEntries={['/']}><Routes><Route path="/" element={<Dashboard />} /><Route path="/login" element={<div>Вход для сотрудников платформы</div>} /></Routes></MemoryRouter>)
+    expect(await screen.findByText('Вход для сотрудников платформы')).toBeInTheDocument()
     expect(screen.queryByText('Активы в работе')).not.toBeInTheDocument()
-  })
-
-  it('shows a requester only their own tickets', async () => {
-    useAuthStore.setState({ user: requester, accessToken: 'test-access-token', isAuthenticated: true })
-    render(<MemoryRouter><Tickets /></MemoryRouter>)
-    expect(await screen.findByRole('heading', { name: 'Мои заявки' }, { timeout: 2000 })).toBeInTheDocument()
-    expect(await screen.findByText('INC-1250', {}, { timeout: 2000 })).toBeInTheDocument()
-    expect(screen.queryByText('INC-1249')).not.toBeInTheDocument()
   })
 
   it('blocks direct access to a route outside the requester role', async () => {

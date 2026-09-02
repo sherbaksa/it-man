@@ -4,8 +4,9 @@ export const allowedAttachmentTypes = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'application/pdf', 'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
 ]
-const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'doc', 'docx']
+const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'doc', 'docx', 'txt']
 
 export interface AttachmentCandidate {
   name: string
@@ -16,6 +17,6 @@ export interface AttachmentCandidate {
 export function validateAttachment(file: AttachmentCandidate): string | undefined {
   if (file.size > MAX_ATTACHMENT_SIZE_MB * 1024 * 1024) return `Файл превышает лимит ${MAX_ATTACHMENT_SIZE_MB} МБ`
   const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
-  if (!allowedAttachmentTypes.includes(file.type) && !allowedExtensions.includes(extension)) return 'Разрешены изображения, PDF, DOC и DOCX'
+  if (!allowedAttachmentTypes.includes(file.type) && !allowedExtensions.includes(extension)) return 'Разрешены изображения, PDF, DOC, DOCX и TXT'
   return undefined
 }

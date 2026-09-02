@@ -25,7 +25,7 @@ const tickets = [
 
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user)!
-  if (user.role === 'User') return <Navigate to="/tickets" replace />
+  if (user.role === 'User') return <Navigate to="/login" replace />
   if (user.role === 'Engineer') return <Suspense fallback={dashboardFallback}><EngineerDashboard /></Suspense>
   if (user.role === 'Executive' || user.role === 'IT-Head') return <Suspense fallback={dashboardFallback}><ExecutiveDashboard /></Suspense>
   return (
