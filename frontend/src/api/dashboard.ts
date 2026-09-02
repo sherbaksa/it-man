@@ -4,6 +4,6 @@ import type { ExecutiveSummary } from '../types/dashboard'
 import { buildExecutiveSummary } from '../utils/executiveSummary'
 
 export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
-  const { items } = await getTickets({ page: 1, pageSize: 1_000 })
+  const { items } = await getTickets({ page: 1, pageSize: 100 })
   return buildExecutiveSummary(items)
 }
