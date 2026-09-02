@@ -21,3 +21,4 @@ class AttachmentRead(BaseModel):
     size_bytes: int
     download_url: str
     created_at: datetime
+    can_delete: bool

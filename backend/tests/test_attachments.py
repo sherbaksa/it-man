@@ -77,6 +77,7 @@ def test_upload_attachment_success(client: TestClient, engineer_user: User) -> N
     assert body["file_name"] == "photo.png"
     assert body["content_type"] == "image/png"
     assert body["download_url"].startswith("http://mock-presigned/tickets/")
+    assert body["can_delete"] is True  # свой файл — Engineer видит право на удаление
 
 
 def test_upload_attachment_rejects_disallowed_type(client: TestClient, engineer_user: User) -> None:
@@ -209,3 +210,26 @@ def test_delete_attachment_not_found(client: TestClient, engineer_user: User) ->
     )
 
     assert response.status_code == 404
+
+def test_list_attachments_can_delete_reflects_permissions(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    owner_headers = _auth_headers(engineer_user)
+    ticket_id = _create_ticket(client, owner_headers)
+    client.post(
+        f"/api/tickets/{ticket_id}/attachments",
+        headers=owner_headers,
+        files={"file": ("photo.png", io.BytesIO(b"fake-png-bytes"), "image/png")},
+    )
+
+    other_engineer = _make_user(db_session, department, UserRole.ENGINEER)
+    other_response = client.get(
+        f"/api/tickets/{ticket_id}/attachments", headers=_auth_headers(other_engineer)
+    )
+    assert other_response.json()[0]["can_delete"] is False
+
+    it_head = _make_user(db_session, department, UserRole.IT_HEAD)
+    it_head_response = client.get(
+        f"/api/tickets/{ticket_id}/attachments", headers=_auth_headers(it_head)
+    )
+    assert it_head_response.json()[0]["can_delete"] is True

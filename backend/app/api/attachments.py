@@ -25,6 +25,7 @@ from app.services.attachment_service import (
     AttachmentPermissionError,
     AttachmentTooLargeError,
     AttachmentTypeNotAllowedError,
+    can_delete_attachment,
 )
 
 router = APIRouter(
@@ -33,9 +34,9 @@ router = APIRouter(
 )
 
 
-def _to_read(attachment: Attachment) -> AttachmentRead:
-    """Собирает AttachmentRead вручную — download_url не поле модели,
-    генерируется на лету (см. schemas/attachment.py)."""
+def _to_read(attachment: Attachment, current_user: User) -> AttachmentRead:
+    """Собирает AttachmentRead вручную — download_url и can_delete не поля модели,
+    вычисляются на лету (см. schemas/attachment.py)."""
     return AttachmentRead(
         id=attachment.id,
         file_name=attachment.file_name,
@@ -43,6 +44,7 @@ def _to_read(attachment: Attachment) -> AttachmentRead:
         size_bytes=attachment.size_bytes,
         download_url=get_presigned_url(attachment.storage_key),
         created_at=attachment.created_at,
+        can_delete=can_delete_attachment(attachment, current_user),
     )
 
 
@@ -83,20 +85,21 @@ async def upload_attachment(
         file_bytes=file_bytes,
         uploaded_by=current_user.id,
     )
-    return _to_read(attachment)
+    return _to_read(attachment, current_user)
 
 
 @router.get("/api/tickets/{ticket_id}/attachments", response_model=list[AttachmentRead])
 def get_ticket_attachments(
     ticket_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[AttachmentRead]:
     ticket = ticket_service.get_ticket(db, ticket_id)
     if ticket is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заявка не найдена")
 
     attachments = attachment_service.list_attachments(db, ticket_id)
-    return [_to_read(item) for item in attachments]
+    return [_to_read(item, current_user) for item in attachments]
 
 
 @router.delete("/api/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)

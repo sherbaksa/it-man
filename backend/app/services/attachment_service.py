@@ -108,10 +108,20 @@ def get_attachment(db: Session, attachment_id: uuid.UUID) -> Attachment | None:
     return db.get(Attachment, attachment_id)
 
 
-def check_delete_permission(attachment: Attachment, current_user: User) -> None:
+def can_delete_attachment(attachment: Attachment, current_user: User) -> bool:
     """Engineer может удалить только вложение, загруженное им самим;
-    IT-Head/Admin — любое."""
-    if current_user.role == UserRole.ENGINEER and attachment.uploaded_by != current_user.id:
+    IT-Head/Admin — любое. Единственный источник истины: используется и для
+    поля can_delete в AttachmentRead (см. api/attachments.py), и для реальной
+    проверки прав перед удалением (check_delete_permission), чтобы правило
+    не расходилось между сериализацией и фактическим действием."""
+    if current_user.role == UserRole.ENGINEER:
+        return attachment.uploaded_by == current_user.id
+    return True
+
+
+def check_delete_permission(attachment: Attachment, current_user: User) -> None:
+    """Бросает AttachmentPermissionError, если can_delete_attachment() вернула False."""
+    if not can_delete_attachment(attachment, current_user):
         raise AttachmentPermissionError("Engineer может удалять только свои собственные вложения")
 
 

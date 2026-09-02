@@ -2066,6 +2066,10 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "can_delete": {
+            "type": "boolean",
+            "title": "Can Delete"
           }
         },
         "type": "object",
@@ -2075,7 +2079,8 @@
           "content_type",
           "size_bytes",
           "download_url",
-          "created_at"
+          "created_at",
+          "can_delete"
         ],
         "title": "AttachmentRead"
       },
