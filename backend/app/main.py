@@ -48,8 +48,20 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _init_storage() -> None:
-    """Idempotent-создание бакета MinIO для вложений заявок при старте приложения."""
-    ensure_bucket_exists()
+    """Idempotent-создание бакета MinIO для вложений заявок при старте приложения.
+
+    Обёрнуто в try/except: недоступность MinIO на старте (например, в CI, где
+    реальный MinIO сознательно не поднимается — см. план сессии B10a, тесты
+    мокают все обращения к MinIO) не должна блокировать запуск всего приложения.
+    В реальной эксплуатации (dev/prod) это не маскирует проблему — backend
+    стартует после MinIO по healthcheck-зависимости в docker-compose, так что
+    сюда мы попадаем уже с реально доступным MinIO."""
+    import logging
+
+    try:
+        ensure_bucket_exists()
+    except Exception as exc:  # noqa: BLE001 — намеренно широкий catch, см. докстринг
+        logging.getLogger(__name__).warning("Не удалось создать бакет MinIO при старте: %s", exc)
 
 app.include_router(auth_router)
 app.include_router(users_router)

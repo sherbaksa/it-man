@@ -54,6 +54,8 @@ jobs:
           POSTGRES_HOST: localhost
           SECRET_KEY: test-secret-key-for-ci-only
           WEBHOOK_SECRET: test-webhook-secret-for-ci-only
+          MINIO_ROOT_USER: test-minio-user
+          MINIO_ROOT_PASSWORD: test-minio-password
         run: pytest
   frontend:
     name: Frontend checks
