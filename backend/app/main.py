@@ -10,6 +10,7 @@
 - my/tickets (B10) — подключён
 - equipment-types (B09a) — подключён
 - attachments (B10a) — подключён
+- ticket-assignees (B10b) — подключён
 - orders, monitoring — в следующих сессиях
 """
 
@@ -22,6 +23,7 @@ from app.api.auth import router as auth_router
 from app.api.equipment_types import router as equipment_types_router
 from app.api.my_tickets import router as my_tickets_router
 from app.api.repairs import router as repairs_router
+from app.api.ticket_assignees import router as ticket_assignees_router
 from app.api.tickets import router as tickets_router
 from app.api.users import router as users_router
 from app.core.config import settings
@@ -68,6 +70,7 @@ app.include_router(users_router)
 app.include_router(assets_router)
 app.include_router(equipment_types_router)
 app.include_router(attachments_router)
+app.include_router(ticket_assignees_router)
 app.include_router(my_tickets_router)
 app.include_router(repairs_router)
 app.include_router(tickets_router)

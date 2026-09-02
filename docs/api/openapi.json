@@ -955,6 +955,36 @@
         }
       }
     },
+    "/api/ticket-assignees": {
+      "get": {
+        "tags": [
+          "ticket-assignees"
+        ],
+        "summary": "Get Ticket Assignees",
+        "operationId": "get_ticket_assignees_api_ticket_assignees_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketAssigneeRead"
+                  },
+                  "type": "array",
+                  "title": "Response Get Ticket Assignees Api Ticket Assignees Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/my/tickets": {
       "get": {
         "tags": [
@@ -2619,6 +2649,25 @@
         ],
         "title": "TicketAssetBrief",
         "description": "Вложенный актив — минимальный набор полей, без полной карточки оборудования."
+      },
+      "TicketAssigneeRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "TicketAssigneeRead"
       },
       "TicketCreate": {
         "properties": {
