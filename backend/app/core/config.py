@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False
     MINIO_BUCKET_TICKETS: str = "tickets-attachments"
     MAX_ATTACHMENT_SIZE_MB: int = 10
+
+    # Zabbix (мониторинг, сессия B11 — см. TZ п. 6.1)
+    ZABBIX_URL: str = "http://192.168.10.21:8081/api_jsonrpc.php"
+    ZABBIX_API_TOKEN: str = ""
+
     # Secure-флаг refresh-cookie: True по умолчанию (требование ТЗ раздел 7 для прода),
     # False — только для локальной разработки по HTTP без TLS
     REFRESH_COOKIE_SECURE: bool = True
