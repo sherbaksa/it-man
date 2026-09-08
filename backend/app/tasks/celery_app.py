@@ -25,6 +25,10 @@ celery_app.conf.update(
             "task": "app.tasks.monitoring_tasks.poll_zabbix",
             "schedule": crontab(minute="*/5"),
         },
+        "cleanup-monitoring-history-daily": {
+            "task": "app.tasks.monitoring_tasks.cleanup_monitoring_history",
+            "schedule": crontab(hour=3, minute=0),
+        },
     },
 )
 

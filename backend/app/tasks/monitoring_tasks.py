@@ -38,3 +38,13 @@ def poll_zabbix(self) -> None:
         monitoring_service.apply_zabbix_hosts(db, hosts)
     finally:
         db.close()
+
+@celery_app.task
+def cleanup_monitoring_history() -> None:
+    """Раз в сутки удаляет устаревшие записи MonitoringStatusHistory —
+    глубина хранения per-host, см. monitoring_service.cleanup_old_history (B12)."""
+    db = SessionLocal()
+    try:
+        monitoring_service.cleanup_old_history(db)
+    finally:
+        db.close()

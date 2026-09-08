@@ -7,6 +7,7 @@ from app.models.document_template import DocumentTemplate
 from app.models.equipment_type import EquipmentType
 from app.models.integration_log import IntegrationLog
 from app.models.monitoring_status import MonitoringStatus
+from app.models.monitoring_status_history import MonitoringStatusHistory
 from app.models.movement import Movement
 from app.models.order import Order
 from app.models.order_history import OrderHistory
@@ -26,6 +27,7 @@ __all__ = [
     "Order",
     "OrderHistory",
     "MonitoringStatus",
+    "MonitoringStatusHistory",
     "IntegrationLog",
     "AuditLog",
     "Attachment",

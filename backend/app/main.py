@@ -11,7 +11,8 @@
 - equipment-types (B09a) — подключён
 - attachments (B10a) — подключён
 - ticket-assignees (B10b) — подключён
-- orders, monitoring — в следующих сессиях
+- monitoring (B12) — подключён
+- orders — в следующих сессиях
 """
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from app.api.assets import router as assets_router
 from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.equipment_types import router as equipment_types_router
+from app.api.monitoring import router as monitoring_router
 from app.api.my_tickets import router as my_tickets_router
 from app.api.repairs import router as repairs_router
 from app.api.ticket_assignees import router as ticket_assignees_router
@@ -74,6 +76,8 @@ app.include_router(ticket_assignees_router)
 app.include_router(my_tickets_router)
 app.include_router(repairs_router)
 app.include_router(tickets_router)
+app.include_router(tickets_router)
+app.include_router(monitoring_router)
 
 
 @app.get("/health", tags=["system"])

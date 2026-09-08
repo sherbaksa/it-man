@@ -65,6 +65,15 @@ class MonitoringStatus(Base):
     checked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+    history_retention_hours: Mapped[int | None] = mapped_column(
+        nullable=True,
+        comment=(
+            "Глубина хранения истории в часах для этого хоста; NULL = использовать "
+            "settings.MONITORING_HISTORY_DEFAULT_RETENTION_HOURS. Задаётся вручную "
+            "для хостов, требующих более глубокой истории (серверы, сетевые шары), "
+            "в отличие от рядовых хостов, где интересна только оперативная картина (см. B12)."
+        ),
+    )
 
     def __repr__(self) -> str:
         return f"<MonitoringStatus id={self.id} host={self.host_identifier!r} status={self.status}>"

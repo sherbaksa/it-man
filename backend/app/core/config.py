@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     ZABBIX_URL: str = "http://192.168.10.21:8081/api_jsonrpc.php"
     ZABBIX_API_TOKEN: str = ""
 
+    # Мониторинг: глубина хранения истории (B12). Дефолт для хостов без индивидуальной
+    # настройки (MonitoringStatus.history_retention_hours). Обычным хостам/сетевым
+    # устройствам достаточно суток; для серверов/сетевых шар — переопределяется
+    # точечно на уровне конкретной записи MonitoringStatus.
+    MONITORING_HISTORY_DEFAULT_RETENTION_HOURS: int = 24
+
     # Secure-флаг refresh-cookie: True по умолчанию (требование ТЗ раздел 7 для прода),
     # False — только для локальной разработки по HTTP без TLS
     REFRESH_COOKIE_SECURE: bool = True

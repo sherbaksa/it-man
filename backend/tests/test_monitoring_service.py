@@ -3,6 +3,7 @@
 """
 from typing import Any
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -103,3 +104,77 @@ def test_record_zabbix_failure_marks_known_hosts_unknown(db_session: Session) ->
 
     rows = db_session.scalars(select(MonitoringStatus)).all()
     assert all(r.status == MonitoringHealthStatus.UNKNOWN for r in rows)
+
+def test_cleanup_old_history_respects_default_retention(
+    db_session: Session, monkeypatch: "pytest.MonkeyPatch"
+) -> None:
+    """Без индивидуальной настройки хоста применяется глобальный дефолт
+    (settings.MONITORING_HISTORY_DEFAULT_RETENTION_HOURS)."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.config import settings
+    from app.models.monitoring_status_history import MonitoringStatusHistory
+
+    monkeypatch.setattr(settings, "MONITORING_HISTORY_DEFAULT_RETENTION_HOURS", 24)
+    now = datetime.now(timezone.utc)
+    db_session.add_all(
+        [
+            MonitoringStatusHistory(
+                host_identifier="srv-old",
+                source=MonitoringSource.ZABBIX,
+                status=MonitoringHealthStatus.OK,
+                last_value=None,
+                checked_at=now - timedelta(hours=48),  # старше дефолта — удалится
+            ),
+            MonitoringStatusHistory(
+                host_identifier="srv-old",
+                source=MonitoringSource.ZABBIX,
+                status=MonitoringHealthStatus.OK,
+                last_value=None,
+                checked_at=now - timedelta(hours=1),  # свежая — останется
+            ),
+        ]
+    )
+    db_session.commit()
+
+    deleted = monitoring_service.cleanup_old_history(db_session)
+
+    assert deleted == 1
+    remaining = db_session.scalars(select(MonitoringStatusHistory)).all()
+    assert len(remaining) == 1
+    assert remaining[0].checked_at > now - timedelta(hours=24)
+
+
+def test_cleanup_old_history_respects_per_host_override(db_session: Session) -> None:
+    """Хост с индивидуальной настройкой (например, сервер с history_retention_hours=720)
+    не должен чиститься по глобальному дефолту, даже если запись старше него."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.monitoring_status_history import MonitoringStatusHistory
+
+    db_session.add(
+        MonitoringStatus(
+            host_identifier="srv-important",
+            source=MonitoringSource.ZABBIX,
+            status=MonitoringHealthStatus.OK,
+            last_value=None,
+            checked_at=datetime.now(timezone.utc),
+            history_retention_hours=720,  # 30 дней — например, файловый сервер
+        )
+    )
+    db_session.add(
+        MonitoringStatusHistory(
+            host_identifier="srv-important",
+            source=MonitoringSource.ZABBIX,
+            status=MonitoringHealthStatus.OK,
+            last_value=None,
+            checked_at=datetime.now(timezone.utc) - timedelta(hours=48),  # старше дефолта (24ч), но не 720ч
+        )
+    )
+    db_session.commit()
+
+    deleted = monitoring_service.cleanup_old_history(db_session)
+
+    assert deleted == 0
+    remaining = db_session.scalars(select(MonitoringStatusHistory)).all()
+    assert len(remaining) == 1
