@@ -13,8 +13,8 @@ GET /api/monitoring/summary — агрегат {ok, warning, critical, unknown} 
 Доступ: Engineer+ (Engineer, IT-Head, Admin) для status/history;
 Executive+ (Executive, IT-Head, Admin) для summary — см. п. 1.3 ТЗ.
 """
-from typing import cast
 from datetime import datetime
+from typing import cast
 
 from fastapi import APIRouter, Depends, Query
 from redis import Redis
