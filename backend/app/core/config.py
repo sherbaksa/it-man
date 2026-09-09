@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     # точечно на уровне конкретной записи MonitoringStatus.
     MONITORING_HISTORY_DEFAULT_RETENTION_HOURS: int = 24
 
+    # Часовой пояс по умолчанию для агрегации по календарным дням (график
+    # "Динамика заявок" на дашборде руководства, B13b). В рамках текущего ТЗ —
+    # глобальная настройка организации, а не индивидуальная для пользователя
+    # (self-service профиль пользователя — за рамками текущей разработки,
+    # см. согласованное с Dev1 решение в B13b).
+    DEFAULT_TIMEZONE: str = "Asia/Vladivostok"
+
     # Secure-флаг refresh-cookie: True по умолчанию (требование ТЗ раздел 7 для прода),
     # False — только для локальной разработки по HTTP без TLS
     REFRESH_COOKIE_SECURE: bool = True

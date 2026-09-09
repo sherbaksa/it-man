@@ -2406,16 +2406,24 @@
           },
           "priority_breakdown": {
             "$ref": "#/components/schemas/TicketPriorityBreakdown"
+          },
+          "ticket_trend": {
+            "items": {
+              "$ref": "#/components/schemas/TicketTrendPoint"
+            },
+            "type": "array",
+            "title": "Ticket Trend"
           }
         },
         "type": "object",
         "required": [
           "open_tickets",
           "average_resolution_hours",
-          "priority_breakdown"
+          "priority_breakdown",
+          "ticket_trend"
         ],
         "title": "ExecutiveSummary",
-        "description": "Ответ GET /api/dashboard/executive.\n\nopen_tickets — count(status IN (new, in_progress)).\naverage_resolution_hours — среднее (closed_at - created_at) в часах по\n    тикетам со status=done, closed_at за последние 30 дней (фиксированное\n    окно, согласовано в B13a — без query-параметра периода).\npriority_breakdown — разбивка по priority среди тикетов, ещё не закрытых\n    (status NOT IN (done, rejected))."
+        "description": "Ответ GET /api/dashboard/executive.\n\nopen_tickets — count(status IN (new, in_progress)).\naverage_resolution_hours — среднее (closed_at - created_at) в часах по\n    тикетам со status=done, closed_at за последние 30 дней (фиксированное\n    окно, согласовано в B13a — без query-параметра периода; часовой пояс\n    тут не важен — это скользящий интервал от now(), а не календарные дни).\npriority_breakdown — разбивка по priority среди тикетов, ещё не закрытых\n    (status NOT IN (done, rejected)).\nticket_trend — 7 точек (сегодня и 6 дней до него) в settings.DEFAULT_TIMEZONE\n    (B13b, согласовано с Dev1 — глобальная настройка организации, не\n    per-user; self-service профиль пользователя — за рамками текущей\n    разработки). Дни без заявок присутствуют с нулями."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3366,6 +3374,30 @@
           "rejected"
         ],
         "title": "TicketStatus"
+      },
+      "TicketTrendPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "created",
+          "closed"
+        ],
+        "title": "TicketTrendPoint",
+        "description": "Один день графика «Динамика заявок» (F06, п. 5 ТЗ). Дата — календарный\nдень в settings.DEFAULT_TIMEZONE (B13b), не UTC."
       },
       "TicketUpdate": {
         "properties": {

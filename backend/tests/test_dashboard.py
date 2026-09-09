@@ -7,7 +7,9 @@ open_tickets, priority_breakdown, average_resolution_hours (включая сл�
 "нет закрытых тикетов за 30 дней" -> 0.0, и случай с реальным средним).
 """
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.ticket import Ticket, TicketPriority, TicketSource, TicketStatus
 from app.models.user import User, UserRole
@@ -133,3 +135,80 @@ def test_dashboard_returns_zero_average_when_no_done_tickets(
     assert body["open_tickets"] == 0
     assert body["average_resolution_hours"] == 0.0
     assert body["priority_breakdown"] == {"low": 0, "medium": 0, "high": 0, "critical": 0}
+
+def test_dashboard_ticket_trend_length_and_last_day_is_today(client, db_session, department):
+    """7 точек, последняя — сегодняшний день по DEFAULT_TIMEZONE, первая — 6 дней назад."""
+    headers = _executive_headers(client, db_session, department)
+    response = client.get(DASHBOARD_URL, headers=headers)
+
+    trend = response.json()["ticket_trend"]
+    assert len(trend) == 7
+
+    tz = ZoneInfo(settings.DEFAULT_TIMEZONE)
+    today_local = datetime.now(tz).date()
+    assert trend[-1]["date"] == today_local.isoformat()
+    assert trend[0]["date"] == (today_local - timedelta(days=6)).isoformat()
+
+
+def test_dashboard_ticket_trend_buckets_by_local_calendar_day(
+    client, db_session, department, engineer_user
+):
+    """Ключевой тест часового пояса: тикет за минуту до местной полуночи и за
+    минуту после должны попасть в РАЗНЫЕ бакеты (вчера/сегодня), даже если по
+    UTC они могут оказаться в одних сутках."""
+    tz = ZoneInfo(settings.DEFAULT_TIMEZONE)
+    today_local = datetime.now(tz).date()
+    local_midnight_utc = datetime.combine(
+        today_local, datetime.min.time(), tzinfo=tz
+    ).astimezone(timezone.utc)
+
+    _make_ticket(
+        db_session, engineer_user.id, priority=TicketPriority.LOW, status=TicketStatus.NEW,
+        created_at=local_midnight_utc - timedelta(minutes=1),
+    )
+    _make_ticket(
+        db_session, engineer_user.id, priority=TicketPriority.LOW, status=TicketStatus.NEW,
+        created_at=local_midnight_utc + timedelta(minutes=1),
+    )
+
+    headers = _executive_headers(client, db_session, department)
+    response = client.get(DASHBOARD_URL, headers=headers)
+    trend = {point["date"]: point for point in response.json()["ticket_trend"]}
+
+    yesterday_local = today_local - timedelta(days=1)
+    assert trend[yesterday_local.isoformat()]["created"] == 1
+    assert trend[today_local.isoformat()]["created"] == 1
+
+
+def test_dashboard_ticket_trend_excludes_tickets_outside_window(
+    client, db_session, department, engineer_user
+):
+    old_created_at = datetime.now(timezone.utc) - timedelta(days=10)
+    _make_ticket(
+        db_session, engineer_user.id, priority=TicketPriority.LOW, status=TicketStatus.NEW,
+        created_at=old_created_at,
+    )
+
+    headers = _executive_headers(client, db_session, department)
+    response = client.get(DASHBOARD_URL, headers=headers)
+
+    assert sum(point["created"] for point in response.json()["ticket_trend"]) == 0
+
+
+def test_dashboard_ticket_trend_counts_closed_tickets(
+    client, db_session, department, engineer_user
+):
+    now = datetime.now(timezone.utc)
+    _make_ticket(
+        db_session, engineer_user.id, priority=TicketPriority.LOW, status=TicketStatus.DONE,
+        created_at=now - timedelta(hours=2), closed_at=now,
+    )
+
+    headers = _executive_headers(client, db_session, department)
+    response = client.get(DASHBOARD_URL, headers=headers)
+    trend = response.json()["ticket_trend"]
+
+    tz = ZoneInfo(settings.DEFAULT_TIMEZONE)
+    today_local = datetime.now(tz).date().isoformat()
+    today_point = next(p for p in trend if p["date"] == today_local)
+    assert today_point["closed"] == 1
