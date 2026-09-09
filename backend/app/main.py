@@ -28,6 +28,7 @@ from app.api.repairs import router as repairs_router
 from app.api.ticket_assignees import router as ticket_assignees_router
 from app.api.tickets import router as tickets_router
 from app.api.users import router as users_router
+from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
 from app.core.storage import ensure_bucket_exists
 
@@ -76,8 +77,8 @@ app.include_router(ticket_assignees_router)
 app.include_router(my_tickets_router)
 app.include_router(repairs_router)
 app.include_router(tickets_router)
-app.include_router(tickets_router)
 app.include_router(monitoring_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/health", tags=["system"])

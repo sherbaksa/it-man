@@ -36,7 +36,7 @@ def health_status_from_triggers(triggers: list[dict]) -> MonitoringHealthStatus:
     return MonitoringHealthStatus.WARNING
 
 
-def _upsert_monitoring_status(
+def upsert_monitoring_status(
     db: Session, *, host_identifier: str, status: MonitoringHealthStatus, last_value: str | None
 ) -> None:
     existing = db.scalar(
@@ -83,7 +83,7 @@ def apply_zabbix_hosts(db: Session, hosts: list[dict]) -> None:
         status = health_status_from_triggers(triggers)
         worst = worst_active_trigger(triggers)
         last_value = worst["description"] if worst else None
-        _upsert_monitoring_status(db, host_identifier=host["host"], status=status, last_value=last_value)
+        upsert_monitoring_status(db, host_identifier=host["host"], status=status, last_value=last_value)
 
     db.add(
         IntegrationLog(

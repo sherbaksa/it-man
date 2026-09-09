@@ -173,3 +173,31 @@ def update_ticket(
     db.commit()
     db.refresh(ticket)
     return ticket
+
+def create_ticket_from_zabbix(
+    db: Session,
+    *,
+    host_identifier: str,
+    problem_name: str,
+    priority: TicketPriority,
+    author_id: uuid.UUID,
+) -> Ticket:
+    """Создаёт заявку от лица системного теневого пользователя Zabbix
+    (source=ZABBIX_AUTO, status сразу IN_PROGRESS, приоритет наследуется от
+    severity — п. 3.5 ТЗ). В отличие от create_ticket() (WEB-путь через
+    TicketCreate), НЕ коммитит сама: вызывается из webhook_service.py, где
+    апдейт MonitoringStatus + создание Ticket + запись IntegrationLog — одна
+    транзакция (согласовано в B13)."""
+    from app.models.ticket import TicketSource
+
+    ticket = Ticket(
+        title=f"Zabbix: {problem_name} ({host_identifier})",
+        description=f"Автоматически создано по событию мониторинга Zabbix на хосте {host_identifier}.",
+        priority=priority,
+        status=TicketStatus.IN_PROGRESS,
+        author_id=author_id,
+        source=TicketSource.ZABBIX_AUTO,
+    )
+    db.add(ticket)
+    db.flush()  # без commit — популяция id/created_at (python-side default) без завершения транзакции
+    return ticket

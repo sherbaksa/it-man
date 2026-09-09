@@ -1529,6 +1529,207 @@
         }
       }
     },
+    "/api/monitoring/status": {
+      "get": {
+        "tags": [
+          "monitoring"
+        ],
+        "summary": "Get Monitoring Status",
+        "operationId": "get_monitoring_status_api_monitoring_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringStatusListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/monitoring/status/{host_identifier}/history": {
+      "get": {
+        "tags": [
+          "monitoring"
+        ],
+        "summary": "Get Monitoring History",
+        "operationId": "get_monitoring_history_api_monitoring_status__host_identifier__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "host_identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Host Identifier"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringHistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitoring/summary": {
+      "get": {
+        "tags": [
+          "monitoring"
+        ],
+        "summary": "Get Monitoring Summary",
+        "operationId": "get_monitoring_summary_api_monitoring_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/webhooks/zabbix": {
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Zabbix Webhook",
+        "description": "Принимает событие Zabbix Action -> Webhook. Обновляет MonitoringStatus;\nпри status=PROBLEM и severity >= High — создаёт Ticket(source=zabbix_auto)\nи возвращает его. Иначе возвращает null (обновлён только мониторинг).",
+        "operationId": "zabbix_webhook_api_webhooks_zabbix_post",
+        "parameters": [
+          {
+            "name": "x-webhook-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZabbixWebhookPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TicketRead"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Zabbix Webhook Api Webhooks Zabbix Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -2215,6 +2416,108 @@
         ],
         "title": "LoginResponse"
       },
+      "MonitoringAssetBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "inventory_number": {
+            "type": "string",
+            "title": "Inventory Number"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "inventory_number",
+          "model"
+        ],
+        "title": "MonitoringAssetBrief",
+        "description": "Вложенный актив — минимальный набор полей, по аналогии с TicketAssetBrief."
+      },
+      "MonitoringHealthStatus": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "warning",
+          "critical",
+          "unknown"
+        ],
+        "title": "MonitoringHealthStatus"
+      },
+      "MonitoringHistoryPoint": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/MonitoringHealthStatus"
+          },
+          "last_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Value"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "last_value",
+          "checked_at"
+        ],
+        "title": "MonitoringHistoryPoint"
+      },
+      "MonitoringHistoryResponse": {
+        "properties": {
+          "host_identifier": {
+            "type": "string",
+            "title": "Host Identifier"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MonitoringHistoryPoint"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "host_identifier",
+          "items"
+        ],
+        "title": "MonitoringHistoryResponse",
+        "description": "Ответ GET /api/monitoring/status/{host_identifier}/history."
+      },
+      "MonitoringSource": {
+        "type": "string",
+        "enum": [
+          "zabbix",
+          "kaspersky"
+        ],
+        "title": "MonitoringSource"
+      },
       "MonitoringStatusBrief": {
         "properties": {
           "status": {
@@ -2228,6 +2531,113 @@
         ],
         "title": "MonitoringStatusBrief",
         "description": "Заглушка под мониторинг (появится в B11-B13). Пока не используется в сервисном слое."
+      },
+      "MonitoringStatusListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MonitoringStatusRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "MonitoringStatusListResponse",
+        "description": "Обёртка {items, total} для GET /api/monitoring/status."
+      },
+      "MonitoringStatusRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "host_identifier": {
+            "type": "string",
+            "title": "Host Identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MonitoringHealthStatus"
+          },
+          "last_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/MonitoringSource"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "asset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonitoringAssetBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "host_identifier",
+          "status",
+          "last_value",
+          "source",
+          "checked_at",
+          "asset"
+        ],
+        "title": "MonitoringStatusRead"
+      },
+      "MonitoringSummary": {
+        "properties": {
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "warning": {
+            "type": "integer",
+            "title": "Warning"
+          },
+          "critical": {
+            "type": "integer",
+            "title": "Critical"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "warning",
+          "critical",
+          "unknown"
+        ],
+        "title": "MonitoringSummary",
+        "description": "Агрегат для дашборда руководства, GET /api/monitoring/summary.\n\nok/warning/critical — контракт по ТЗ п. 4.5; unknown — добавлено сверх\nконтракта, чтобы хосты без свежих данных не терялись молча из подсчёта."
       },
       "MovementBrief": {
         "properties": {
@@ -3263,6 +3673,66 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ZabbixProblemStatus": {
+        "type": "string",
+        "enum": [
+          "PROBLEM",
+          "RESOLVED"
+        ],
+        "title": "ZabbixProblemStatus"
+      },
+      "ZabbixSeverity": {
+        "type": "string",
+        "enum": [
+          "not_classified",
+          "information",
+          "warning",
+          "average",
+          "high",
+          "disaster"
+        ],
+        "title": "ZabbixSeverity"
+      },
+      "ZabbixWebhookPayload": {
+        "properties": {
+          "host": {
+            "type": "string",
+            "title": "Host",
+            "description": "Host identifier (host name/IP) из Zabbix — соответствует MonitoringStatus.host_identifier"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ZabbixSeverity"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ZabbixProblemStatus"
+          },
+          "problem_name": {
+            "type": "string",
+            "title": "Problem Name",
+            "description": "Название триггера/проблемы (Zabbix {EVENT.NAME})"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id",
+            "description": "{EVENT.ID} Zabbix — задел под идемпотентность повторных вызовов, в B13 не используется (см. известные проблемы отчёта)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "host",
+          "severity",
+          "status",
+          "problem_name"
+        ],
+        "title": "ZabbixWebhookPayload"
       }
     },
     "securitySchemes": {
