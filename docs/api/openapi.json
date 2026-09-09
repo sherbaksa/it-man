@@ -1730,6 +1730,32 @@
         }
       }
     },
+    "/api/dashboard/executive": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Executive Dashboard",
+        "operationId": "get_executive_dashboard_api_dashboard_executive_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutiveSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -2367,6 +2393,29 @@
           "name"
         ],
         "title": "EquipmentTypeRead"
+      },
+      "ExecutiveSummary": {
+        "properties": {
+          "open_tickets": {
+            "type": "integer",
+            "title": "Open Tickets"
+          },
+          "average_resolution_hours": {
+            "type": "number",
+            "title": "Average Resolution Hours"
+          },
+          "priority_breakdown": {
+            "$ref": "#/components/schemas/TicketPriorityBreakdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open_tickets",
+          "average_resolution_hours",
+          "priority_breakdown"
+        ],
+        "title": "ExecutiveSummary",
+        "description": "Ответ GET /api/dashboard/executive.\n\nopen_tickets — count(status IN (new, in_progress)).\naverage_resolution_hours — среднее (closed_at - created_at) в часах по\n    тикетам со status=done, closed_at за последние 30 дней (фиксированное\n    окно, согласовано в B13a — без query-параметра периода).\npriority_breakdown — разбивка по priority среди тикетов, ещё не закрытых\n    (status NOT IN (done, rejected))."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3170,6 +3219,34 @@
           "critical"
         ],
         "title": "TicketPriority"
+      },
+      "TicketPriorityBreakdown": {
+        "properties": {
+          "low": {
+            "type": "integer",
+            "title": "Low"
+          },
+          "medium": {
+            "type": "integer",
+            "title": "Medium"
+          },
+          "high": {
+            "type": "integer",
+            "title": "High"
+          },
+          "critical": {
+            "type": "integer",
+            "title": "Critical"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "title": "TicketPriorityBreakdown"
       },
       "TicketRead": {
         "properties": {

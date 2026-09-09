@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.assets import router as assets_router
 from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
+from app.api.dashboard import router as dashboard_router
 from app.api.equipment_types import router as equipment_types_router
 from app.api.monitoring import router as monitoring_router
 from app.api.my_tickets import router as my_tickets_router
@@ -79,6 +80,7 @@ app.include_router(repairs_router)
 app.include_router(tickets_router)
 app.include_router(monitoring_router)
 app.include_router(webhooks_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/health", tags=["system"])
