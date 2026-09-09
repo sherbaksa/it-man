@@ -1,4 +1,4 @@
-/** Author: Dev2 | Date: 2026-07-16 | Purpose: Monitoring status and history API contracts for F08. */
+/** Author: Dev2 | Date: 2026-09-09 | Purpose: Frontend monitoring view models for the real F08 API. */
 export type MonitoringState = 'ok' | 'warning' | 'critical' | 'unknown'
 export type MonitoringSource = 'zabbix' | 'kaspersky'
 
@@ -16,8 +16,6 @@ export interface MonitoringHost {
   lastValue: string
   source: MonitoringSource
   updatedAt: string
-  location?: string
-  availability24h?: number
   asset?: MonitoringAssetRef
 }
 

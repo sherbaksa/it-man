@@ -15,7 +15,7 @@
     "test:tickets": "node --experimental-strip-types scripts/verify-ticket-attachments.mjs",
     "test:dashboard": "node --experimental-strip-types scripts/verify-executive-summary.mjs",
     "test:orders": "node --experimental-strip-types scripts/verify-orders.mjs",
-    "test:monitoring": "node --experimental-strip-types scripts/verify-monitoring.mjs",
+    "test:monitoring": "vitest run --config vitest.config.ts src/api/monitoring.test.ts",
     "test:admin": "node --experimental-strip-types scripts/verify-admin.mjs",
     "test:ui": "vitest run --config vitest.config.ts"
   },
