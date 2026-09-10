@@ -354,6 +354,96 @@ export interface paths {
         patch: operations["patch_ticket_api_tickets__ticket_id__patch"];
         trace?: never;
     };
+    "/api/monitoring/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monitoring Status */
+        get: operations["get_monitoring_status_api_monitoring_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitoring/status/{host_identifier}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monitoring History */
+        get: operations["get_monitoring_history_api_monitoring_status__host_identifier__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitoring/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monitoring Summary */
+        get: operations["get_monitoring_summary_api_monitoring_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/zabbix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Zabbix Webhook
+         * @description Принимает событие Zabbix Action -> Webhook. Обновляет MonitoringStatus;
+         *     при status=PROBLEM и severity >= High — создаёт Ticket(source=zabbix_auto)
+         *     и возвращает его. Иначе возвращает null (обновлён только мониторинг).
+         */
+        post: operations["zabbix_webhook_api_webhooks_zabbix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/executive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Executive Dashboard */
+        get: operations["get_executive_dashboard_api_dashboard_executive_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -574,6 +664,24 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * ExecutiveSummary
+         * @description Ответ GET /api/dashboard/executive.
+         *
+         *     open_tickets — count(status IN (new, in_progress)).
+         *     average_resolution_hours — среднее (closed_at - created_at) в часах по
+         *         тикетам со status=done, closed_at за последние 30 дней (фиксированное
+         *         окно, согласовано в B13a — без query-параметра периода).
+         *     priority_breakdown — разбивка по priority среди тикетов, ещё не закрытых
+         *         (status NOT IN (done, rejected)).
+         */
+        ExecutiveSummary: {
+            /** Open Tickets */
+            open_tickets: number;
+            /** Average Resolution Hours */
+            average_resolution_hours: number;
+            priority_breakdown: components["schemas"]["TicketPriorityBreakdown"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -593,12 +701,105 @@ export interface components {
             user: components["schemas"]["UserPublic"];
         };
         /**
+         * MonitoringAssetBrief
+         * @description Вложенный актив — минимальный набор полей, по аналогии с TicketAssetBrief.
+         */
+        MonitoringAssetBrief: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Inventory Number */
+            inventory_number: string;
+            /** Model */
+            model: string | null;
+        };
+        /**
+         * MonitoringHealthStatus
+         * @enum {string}
+         */
+        MonitoringHealthStatus: "ok" | "warning" | "critical" | "unknown";
+        /** MonitoringHistoryPoint */
+        MonitoringHistoryPoint: {
+            status: components["schemas"]["MonitoringHealthStatus"];
+            /** Last Value */
+            last_value: string | null;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+        };
+        /**
+         * MonitoringHistoryResponse
+         * @description Ответ GET /api/monitoring/status/{host_identifier}/history.
+         */
+        MonitoringHistoryResponse: {
+            /** Host Identifier */
+            host_identifier: string;
+            /** Items */
+            items: components["schemas"]["MonitoringHistoryPoint"][];
+        };
+        /**
+         * MonitoringSource
+         * @enum {string}
+         */
+        MonitoringSource: "zabbix" | "kaspersky";
+        /**
          * MonitoringStatusBrief
          * @description Заглушка под мониторинг (появится в B11-B13). Пока не используется в сервисном слое.
          */
         MonitoringStatusBrief: {
             /** Status */
             status: string;
+        };
+        /**
+         * MonitoringStatusListResponse
+         * @description Обёртка {items, total} для GET /api/monitoring/status.
+         */
+        MonitoringStatusListResponse: {
+            /** Items */
+            items: components["schemas"]["MonitoringStatusRead"][];
+            /** Total */
+            total: number;
+        };
+        /** MonitoringStatusRead */
+        MonitoringStatusRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Host Identifier */
+            host_identifier: string;
+            status: components["schemas"]["MonitoringHealthStatus"];
+            /** Last Value */
+            last_value: string | null;
+            source: components["schemas"]["MonitoringSource"];
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            asset: components["schemas"]["MonitoringAssetBrief"] | null;
+        };
+        /**
+         * MonitoringSummary
+         * @description Агрегат для дашборда руководства, GET /api/monitoring/summary.
+         *
+         *     ok/warning/critical — контракт по ТЗ п. 4.5; unknown — добавлено сверх
+         *     контракта, чтобы хосты без свежих данных не терялись молча из подсчёта.
+         */
+        MonitoringSummary: {
+            /** Ok */
+            ok: number;
+            /** Warning */
+            warning: number;
+            /** Critical */
+            critical: number;
+            /** Unknown */
+            unknown: number;
         };
         /** MovementBrief */
         MovementBrief: {
@@ -778,6 +979,17 @@ export interface components {
          * @enum {string}
          */
         TicketPriority: "low" | "medium" | "high" | "critical";
+        /** TicketPriorityBreakdown */
+        TicketPriorityBreakdown: {
+            /** Low */
+            low: number;
+            /** Medium */
+            medium: number;
+            /** High */
+            high: number;
+            /** Critical */
+            critical: number;
+        };
         /** TicketRead */
         TicketRead: {
             /**
@@ -926,6 +1138,36 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * ZabbixProblemStatus
+         * @enum {string}
+         */
+        ZabbixProblemStatus: "PROBLEM" | "RESOLVED";
+        /**
+         * ZabbixSeverity
+         * @enum {string}
+         */
+        ZabbixSeverity: "not_classified" | "information" | "warning" | "average" | "high" | "disaster";
+        /** ZabbixWebhookPayload */
+        ZabbixWebhookPayload: {
+            /**
+             * Host
+             * @description Host identifier (host name/IP) из Zabbix — соответствует MonitoringStatus.host_identifier
+             */
+            host: string;
+            severity: components["schemas"]["ZabbixSeverity"];
+            status: components["schemas"]["ZabbixProblemStatus"];
+            /**
+             * Problem Name
+             * @description Название триггера/проблемы (Zabbix {EVENT.NAME})
+             */
+            problem_name: string;
+            /**
+             * Event Id
+             * @description {EVENT.ID} Zabbix — задел под идемпотентность повторных вызовов, в B13 не используется (см. известные проблемы отчёта)
+             */
+            event_id?: string | null;
         };
     };
     responses: never;
@@ -1790,6 +2032,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_monitoring_status_api_monitoring_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitoringStatusListResponse"];
+                };
+            };
+        };
+    };
+    get_monitoring_history_api_monitoring_status__host_identifier__history_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                host_identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitoringHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_monitoring_summary_api_monitoring_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitoringSummary"];
+                };
+            };
+        };
+    };
+    zabbix_webhook_api_webhooks_zabbix_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-webhook-secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZabbixWebhookPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketRead"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_executive_dashboard_api_dashboard_executive_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutiveSummary"];
                 };
             };
         };
