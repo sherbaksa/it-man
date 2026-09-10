@@ -25,14 +25,12 @@ export function buildExecutiveSummary(items: Ticket[]): ExecutiveSummary {
   })
   const categories = new Map<string, number>()
   items.forEach((ticket) => { const category = ticketCategory(ticket); categories.set(category, (categories.get(category) ?? 0) + 1) })
-  const monitoring = { ok: 18, warning: 1, critical: 0 }
+  const monitoring = { ok: 18, warning: 1, critical: 0, unknown: 0 }
 
   return {
     openTickets: active.length,
     criticalTickets: active.filter((ticket) => ticket.priority === 'critical').length,
-    completedTickets: completed.length,
     averageResolutionHours: Math.round(averageResolutionHours * 10) / 10,
-    availabilityPercent: 97,
     monitoring,
     trend,
     problemCategories: Array.from(categories, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 3),

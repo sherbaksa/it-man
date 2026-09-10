@@ -671,9 +671,14 @@ export interface components {
          *     open_tickets — count(status IN (new, in_progress)).
          *     average_resolution_hours — среднее (closed_at - created_at) в часах по
          *         тикетам со status=done, closed_at за последние 30 дней (фиксированное
-         *         окно, согласовано в B13a — без query-параметра периода).
+         *         окно, согласовано в B13a — без query-параметра периода; часовой пояс
+         *         тут не важен — это скользящий интервал от now(), а не календарные дни).
          *     priority_breakdown — разбивка по priority среди тикетов, ещё не закрытых
          *         (status NOT IN (done, rejected)).
+         *     ticket_trend — 7 точек (сегодня и 6 дней до него) в settings.DEFAULT_TIMEZONE
+         *         (B13b, согласовано с Dev1 — глобальная настройка организации, не
+         *         per-user; self-service профиль пользователя — за рамками текущей
+         *         разработки). Дни без заявок присутствуют с нулями.
          */
         ExecutiveSummary: {
             /** Open Tickets */
@@ -681,6 +686,8 @@ export interface components {
             /** Average Resolution Hours */
             average_resolution_hours: number;
             priority_breakdown: components["schemas"]["TicketPriorityBreakdown"];
+            /** Ticket Trend */
+            ticket_trend: components["schemas"]["TicketTrendPoint"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1027,6 +1034,19 @@ export interface components {
          * @enum {string}
          */
         TicketStatus: "new" | "in_progress" | "done" | "rejected";
+        /**
+         * TicketTrendPoint
+         * @description Один день графика «Динамика заявок» (F06, п. 5 ТЗ). Дата — календарный
+         *     день в settings.DEFAULT_TIMEZONE (B13b), не UTC.
+         */
+        TicketTrendPoint: {
+            /** Date */
+            date: string;
+            /** Created */
+            created: number;
+            /** Closed */
+            closed: number;
+        };
         /**
          * TicketUpdate
          * @description Частичное обновление — используется PATCH-эндпоинтом.
