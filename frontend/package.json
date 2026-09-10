@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json --pretty false",
     "test:smoke": "node scripts/verify-build.mjs",
     "test:tickets": "node --experimental-strip-types scripts/verify-ticket-attachments.mjs",
-    "test:dashboard": "node --experimental-strip-types scripts/verify-executive-summary.mjs",
+    "test:dashboard": "vitest run --config vitest.config.ts src/api/dashboard.test.ts",
     "test:orders": "node --experimental-strip-types scripts/verify-orders.mjs",
     "test:monitoring": "node --experimental-strip-types scripts/verify-monitoring.mjs",
     "test:admin": "node --experimental-strip-types scripts/verify-admin.mjs",
