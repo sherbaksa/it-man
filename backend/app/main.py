@@ -25,6 +25,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.equipment_types import router as equipment_types_router
 from app.api.monitoring import router as monitoring_router
 from app.api.my_tickets import router as my_tickets_router
+from app.api.orders import router as orders_router
 from app.api.repairs import router as repairs_router
 from app.api.ticket_assignees import router as ticket_assignees_router
 from app.api.tickets import router as tickets_router
@@ -78,6 +79,7 @@ app.include_router(ticket_assignees_router)
 app.include_router(my_tickets_router)
 app.include_router(repairs_router)
 app.include_router(tickets_router)
+app.include_router(orders_router)
 app.include_router(monitoring_router)
 app.include_router(webhooks_router)
 app.include_router(dashboard_router)
