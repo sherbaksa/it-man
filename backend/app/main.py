@@ -12,7 +12,9 @@
 - attachments (B10a) — подключён
 - ticket-assignees (B10b) — подключён
 - monitoring (B12) — подключён
-- orders — в следующих сессиях
+- orders (B14) — подключён
+- document-templates (B14a) — подключён
+
 """
 
 from fastapi import FastAPI
@@ -22,6 +24,7 @@ from app.api.assets import router as assets_router
 from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
+from app.api.document_templates import router as document_templates_router
 from app.api.equipment_types import router as equipment_types_router
 from app.api.monitoring import router as monitoring_router
 from app.api.my_tickets import router as my_tickets_router
@@ -74,6 +77,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(assets_router)
 app.include_router(equipment_types_router)
+app.include_router(document_templates_router)
 app.include_router(attachments_router)
 app.include_router(ticket_assignees_router)
 app.include_router(my_tickets_router)

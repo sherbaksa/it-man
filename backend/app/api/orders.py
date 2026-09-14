@@ -28,7 +28,13 @@ from app.core.dependencies import get_current_user, require_role
 from app.models.document_template import DocumentTemplateType
 from app.models.order import OrderStatus
 from app.models.user import User, UserRole
-from app.schemas.order import OrderCreate, OrderListResponse, OrderRead, OrderUpdate
+from app.schemas.order import (
+    OrderCreate,
+    OrderHistoryRead,
+    OrderListResponse,
+    OrderRead,
+    OrderUpdate,
+)
 from app.services import order_service
 from app.services.order_service import OrderInvalidTransitionError, OrderPermissionError
 
@@ -93,3 +99,13 @@ def patch_order(
     except OrderInvalidTransitionError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return OrderRead.model_validate(updated)
+
+
+@router.get("/{order_id}/history", response_model=list[OrderHistoryRead])
+def get_order_history(order_id: uuid.UUID, db: Session = Depends(get_db)) -> list[OrderHistoryRead]:
+    """Версии документа в хронологическом порядке — для Timeline на карточке (F07)."""
+    order = order_service.get_order(db, order_id)
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+    history = order_service.get_order_history(db, order_id)
+    return [OrderHistoryRead.model_validate(item) for item in history]

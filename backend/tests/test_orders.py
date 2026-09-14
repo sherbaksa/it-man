@@ -327,3 +327,80 @@ def test_list_orders_filters_by_status(
     assert body["total"] == 1
     assert body["items"][0]["id"] == executed_order["id"]
     assert draft_order["id"] not in [item["id"] for item in body["items"]]
+
+
+# --- GET /api/document-templates (B14a) ---
+
+
+def test_list_document_templates_returns_all(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    _make_template(db_session, type_=DocumentTemplateType.PURCHASE_REQUEST)
+    _make_template(db_session, type_=DocumentTemplateType.WORK_ORDER)
+
+    response = client.get("/api/document-templates", headers=_auth_headers(engineer_user))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert {"id", "name", "type", "field_schema", "min_approver_role"} <= body[0].keys()
+
+
+def test_list_document_templates_forbidden_for_user_role(
+    client: TestClient, db_session: Session, department: Department
+) -> None:
+    shadow_user = _make_user(db_session, department, UserRole.USER)
+
+    response = client.get("/api/document-templates", headers=_auth_headers(shadow_user))
+
+    assert response.status_code == 403
+
+
+# --- GET /api/orders/{id}/history (B14a) ---
+
+
+def test_order_history_returns_versions_in_order(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    order = _create_order(client, engineer_user, template, fields={"field": "v1"})
+    headers = _auth_headers(engineer_user)
+    client.patch(f"/api/orders/{order['id']}", json={"status": "pending_approval"}, headers=headers)
+    client.patch(f"/api/orders/{order['id']}", json={"fields": {"field": "v2"}}, headers=headers)
+    client.patch(f"/api/orders/{order['id']}", json={"status": "pending_approval"}, headers=headers)
+    client.patch(f"/api/orders/{order['id']}", json={"fields": {"field": "v3"}}, headers=headers)
+
+    response = client.get(f"/api/orders/{order['id']}/history", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["version"] == 1
+    assert body[0]["fields"] == {"field": "v1"}
+    assert body[1]["version"] == 2
+    assert body[1]["fields"] == {"field": "v2"}
+    assert body[0]["changed_by_user"]["id"] == str(engineer_user.id)
+
+
+def test_order_history_empty_for_never_edited_order(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    order = _create_order(client, engineer_user, template)
+
+    response = client.get(
+        f"/api/orders/{order['id']}/history", headers=_auth_headers(engineer_user)
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_order_history_not_found_for_unknown_order_id(
+    client: TestClient, engineer_user: User
+) -> None:
+    response = client.get(
+        f"/api/orders/{uuid.uuid4()}/history", headers=_auth_headers(engineer_user)
+    )
+
+    assert response.status_code == 404

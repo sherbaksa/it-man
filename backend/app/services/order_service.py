@@ -145,6 +145,18 @@ def get_order(db: Session, order_id: uuid.UUID) -> Order | None:
     return db.execute(query).scalar_one_or_none()
 
 
+def get_order_history(db: Session, order_id: uuid.UUID) -> list[OrderHistory]:
+    """Возвращает версии OrderHistory для документа в хронологическом порядке
+    (по возрастанию version) — для Timeline на карточке (B14a)."""
+    query = (
+        select(OrderHistory)
+        .where(OrderHistory.order_id == order_id)
+        .options(selectinload(OrderHistory.changed_by_user))
+        .order_by(OrderHistory.version)
+    )
+    return list(db.execute(query).scalars().all())
+
+
 def create_order(db: Session, data: OrderCreate, author_id: uuid.UUID) -> Order:
     """Создаёт черновик Order. status всегда DRAFT, version всегда 1 —
     оба поля проставляются здесь, а не приходят из OrderCreate."""

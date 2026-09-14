@@ -83,3 +83,19 @@ class OrderListResponse(BaseModel):
 
     items: list[OrderRead]
     total: int
+
+
+class OrderHistoryRead(BaseModel):
+    """Один снапшот версии Order из OrderHistory — для Timeline на карточке
+    документа (GET /api/orders/{id}/history).
+
+    changed_by_user назван по имени ORM-связи (order_history.py:
+    changed_by_user), а не по имени FK-колонки (changed_by) — так
+    from_attributes подхватывает вложенный объект User напрямую."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    version: int
+    fields: dict
+    changed_by_user: OrderPersonBrief
+    changed_at: datetime
