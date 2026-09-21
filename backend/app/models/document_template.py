@@ -1,6 +1,14 @@
 """Модель DocumentTemplate — шаблоны документов ОРД, по п. 3.7 ТЗ.
 min_approver_role переиспользует UserRole из user.py (не заводим отдельный enum-тип
 в БД под ту же смысловую сущность — роль пользователя).
+
+field_schema — JSON-массив описаний полей (не объект): порядок полей в форме
+имеет значение (F07 рендерит их именно в этом порядке), а формат
+{key, label, type, required, placeholder?, options?, defaultValue?} на каждый
+элемент — тот же, что уже реализован на фронте Dev2 (frontend/src/types/order.ts,
+OrderFieldDefinition), чтобы при переходе с мока на реальный API форма не
+менялась. Ранее (сессия B02) поле было типизировано как dict и содержало {}
+(заглушка) — исправлено в сессии B15 вместе с заполнением реальных шаблонов.
 """
 import enum
 import uuid
@@ -38,7 +46,7 @@ class DocumentTemplate(Base):
     )
 
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    field_schema: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    field_schema: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
 
     min_approver_role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role", values_callable=lambda enum_cls: [e.value for e in enum_cls]),

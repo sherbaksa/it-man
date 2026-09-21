@@ -59,7 +59,7 @@ def _make_template(
         name=f"Тестовый шаблон {type_.value}",
         type=type_,
         file_path=f"/app/templates/orders/test_{uuid.uuid4().hex[:8]}.docx",
-        field_schema={},
+        field_schema=[],
         min_approver_role=min_approver_role,
     )
     db_session.add(template)

@@ -39,7 +39,7 @@ class OrderTemplateBrief(BaseModel):
     id: uuid.UUID
     name: str
     type: DocumentTemplateType
-    field_schema: dict
+    field_schema: list[dict]
 
 
 class OrderCreate(BaseModel):

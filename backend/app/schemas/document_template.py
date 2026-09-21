@@ -6,6 +6,8 @@ DocumentTemplateRead включает field_schema (нужен фронту дл
 генерации формы) и min_approver_role (нужен фронту, чтобы понимать заранее,
 кто должен согласовывать документ этого типа) — но не file_path, это
 внутренняя деталь рендера (B15), фронту не нужна и не должна быть публичной.
+
+field_schema — list[dict], не dict (исправлено в B15, см. models/document_template.py).
 """
 import uuid
 
@@ -21,5 +23,5 @@ class DocumentTemplateRead(BaseModel):
     id: uuid.UUID
     name: str
     type: DocumentTemplateType
-    field_schema: dict
+    field_schema: list[dict]
     min_approver_role: UserRole

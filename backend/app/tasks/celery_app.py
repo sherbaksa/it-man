@@ -35,4 +35,4 @@ celery_app.conf.update(
 # Явный импорт модулей с задачами при старте worker'а (см. B11 — autodiscover_tasks
 # рассчитан на Django-конвенцию "<package>.tasks" и не подходит для нашей структуры,
 # где app/tasks/ сам является пакетом с несколькими модулями задач).
-celery_app.conf.imports = ("app.tasks.monitoring_tasks",)
+celery_app.conf.imports = ("app.tasks.monitoring_tasks", "app.tasks.document_tasks")

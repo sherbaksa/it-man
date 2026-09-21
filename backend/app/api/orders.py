@@ -9,18 +9,35 @@ PATCH /api/orders/{id} — частичное обновление: правка
     в зависимости от DocumentTemplate.min_approver_role). Вся логика допустимости
     конкретного действия для конкретной роли — внутри order_service, здесь только
     маппинг исключений в HTTP-коды (по аналогии с api/tickets.py).
+GET /api/orders/{id}/history — версии документа для Timeline (B14a).
+
+GET /api/orders/{id}/render?format=docx|pdf — рендер документа (B15, раздел 8 ТЗ):
+    - format=docx: синхронно, docxtpl работает в памяти (доли секунды) —
+      сразу отдаёт файл, 200.
+    - format=pdf: конвертация через LibreOffice headless — тяжёлая операция
+      (эмпирически 5-30с), поэтому НЕ выполняется внутри HTTP-запроса —
+      ставится в очередь Celery (render_order_pdf.delay), эндпоинт сразу
+      отвечает 202 с task_id и ссылкой на статус (см. decisions.md, решение
+      сессии B15: "202 + отдельный эндпоинт статуса", а не синхронное ожидание).
+GET /api/orders/{id}/render/status/{task_id} — опрашивается фронтом до
+    готовности: 202 (ещё не готово) -> 200 с бинарным PDF (готово) -> 500
+    (конвертация упала).
 
 Доступ: Engineer+ (Engineer, IT-Head, Executive, Admin) — п. 1.3 ТЗ. В отличие
 от tickets.py, сюда дополнительно включён Executive — он может быть
 согласующим для Order с DocumentTemplate.min_approver_role=Executive (см.
 order_service._APPROVER_RANKS), и без доступа к роутеру never смог бы дойти
-до PATCH, чтобы согласовать документ.
-
-GET /api/orders/{id}/render — появится в B15 (рендер через docxtpl), не здесь.
+до PATCH, чтобы согласовать документ. Тот же уровень доступа сохранён и для
+render/render-status — Executive должен иметь возможность посмотреть/скачать
+документ, который согласовывает.
 """
+import base64
 import uuid
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from celery.result import AsyncResult
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -35,8 +52,10 @@ from app.schemas.order import (
     OrderRead,
     OrderUpdate,
 )
-from app.services import order_service
+from app.services import document_render_service, order_service
 from app.services.order_service import OrderInvalidTransitionError, OrderPermissionError
+from app.tasks.celery_app import celery_app
+from app.tasks.document_tasks import render_order_pdf
 
 router = APIRouter(
     prefix="/api/orders",
@@ -109,3 +128,71 @@ def get_order_history(order_id: uuid.UUID, db: Session = Depends(get_db)) -> lis
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
     history = order_service.get_order_history(db, order_id)
     return [OrderHistoryRead.model_validate(item) for item in history]
+
+
+@router.get("/{order_id}/render")
+def render_order(
+    order_id: uuid.UUID,
+    format: Literal["docx", "pdf"] = Query(...),
+    db: Session = Depends(get_db),
+) -> Response:
+    """format=docx — синхронный рендер (docxtpl, в памяти). format=pdf —
+    тяжёлая конвертация уходит в Celery, эндпоинт сразу отвечает 202 (см.
+    decisions.md, решение B15)."""
+    order = order_service.get_order(db, order_id)
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+
+    if format == "docx":
+        try:
+            docx_bytes = document_render_service.render_order_docx(order)
+        except document_render_service.TemplateFileNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{order.id}.docx"'},
+        )
+
+    # format == "pdf"
+    task = render_order_pdf.delay(str(order.id))
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={
+            "task_id": task.id,
+            "status_url": f"/api/orders/{order.id}/render/status/{task.id}",
+        },
+    )
+
+
+@router.get("/{order_id}/render/status/{task_id}")
+def get_render_status(order_id: uuid.UUID, task_id: str, db: Session = Depends(get_db)) -> Response:
+    """Опрашивается фронтом после 202 от /render?format=pdf. Проверка
+    order_id (а не только task_id) — чтобы эндпоинт был осмысленно привязан
+    к конкретному документу, а не принимал произвольный task_id без контекста."""
+    order = order_service.get_order(db, order_id)
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+
+    result = AsyncResult(task_id, app=celery_app)
+
+    if result.state in ("PENDING", "STARTED", "RETRY"):
+        return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content={"status": "pending"})
+
+    if result.state == "FAILURE":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка конвертации в PDF: {result.result}",
+        )
+
+    if result.state == "SUCCESS":
+        payload = result.result
+        pdf_bytes = base64.b64decode(payload["content_b64"])
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{payload["filename"]}"'},
+        )
+
+    # Неизвестное промежуточное состояние Celery — трактуем как "ещё не готово"
+    return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content={"status": result.state.lower()})
