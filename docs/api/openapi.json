@@ -806,6 +806,36 @@
         ]
       }
     },
+    "/api/document-templates": {
+      "get": {
+        "tags": [
+          "document-templates"
+        ],
+        "summary": "Get Document Templates",
+        "operationId": "get_document_templates_api_document_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentTemplateRead"
+                  },
+                  "type": "array",
+                  "title": "Response Get Document Templates Api Document Templates Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/tickets/{ticket_id}/attachments": {
       "post": {
         "tags": [
@@ -1513,6 +1543,371 @@
                 "schema": {
                   "$ref": "#/components/schemas/TicketRead"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Orders",
+        "operationId": "get_orders_api_orders_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/OrderStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentTemplateType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Create Order",
+        "operationId": "create_order_api_orders_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}": {
+      "patch": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Patch Order",
+        "description": "Роль Engineer+ (включая Executive) уже обеспечена dependencies роутера;\nточечная проверка \"кто именно может это конкретное действие\" (автор vs\nсогласующий, с учётом min_approver_role) выполняется внутри order_service.",
+        "operationId": "patch_order_api_orders__order_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}/history": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Order History",
+        "description": "Версии документа в хронологическом порядке — для Timeline на карточке (F07).",
+        "operationId": "get_order_history_api_orders__order_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderHistoryRead"
+                  },
+                  "title": "Response Get Order History Api Orders  Order Id  History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}/render": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Render Order",
+        "description": "format=docx — синхронный рендер (docxtpl, в памяти). format=pdf —\nтяжёлая конвертация уходит в Celery, эндпоинт сразу отвечает 202 (см.\ndecisions.md, решение B15).",
+        "operationId": "render_order_api_orders__order_id__render_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "docx",
+                "pdf"
+              ],
+              "type": "string",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}/render/status/{task_id}": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Render Status",
+        "description": "Опрашивается фронтом после 202 от /render?format=pdf. Проверка\norder_id (а не только task_id) — чтобы эндпоинт был осмысленно привязан\nк конкретному документу, а не принимал произвольный task_id без контекста.",
+        "operationId": "get_render_status_api_orders__order_id__render_status__task_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2355,6 +2750,51 @@
         ],
         "title": "Body_upload_attachment_api_tickets__ticket_id__attachments_post"
       },
+      "DocumentTemplateRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DocumentTemplateType"
+          },
+          "field_schema": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Field Schema"
+          },
+          "min_approver_role": {
+            "$ref": "#/components/schemas/UserRole"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "field_schema",
+          "min_approver_role"
+        ],
+        "title": "DocumentTemplateRead"
+      },
+      "DocumentTemplateType": {
+        "type": "string",
+        "enum": [
+          "purchase_request",
+          "write_off_act",
+          "work_order"
+        ],
+        "title": "DocumentTemplateType"
+      },
       "EquipmentTypeBrief": {
         "properties": {
           "id": {
@@ -2748,6 +3188,246 @@
           "comment"
         ],
         "title": "MovementBrief"
+      },
+      "OrderCreate": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DocumentTemplateType"
+          },
+          "template_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Template Id"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "template_id",
+          "fields"
+        ],
+        "title": "OrderCreate"
+      },
+      "OrderHistoryRead": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          },
+          "changed_by_user": {
+            "$ref": "#/components/schemas/OrderPersonBrief"
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Changed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "fields",
+          "changed_by_user",
+          "changed_at"
+        ],
+        "title": "OrderHistoryRead",
+        "description": "Один снапшот версии Order из OrderHistory — для Timeline на карточке\nдокумента (GET /api/orders/{id}/history).\n\nchanged_by_user назван по имени ORM-связи (order_history.py:\nchanged_by_user), а не по имени FK-колонки (changed_by) — так\nfrom_attributes подхватывает вложенный объект User напрямую."
+      },
+      "OrderListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "OrderListResponse",
+        "description": "Обёртка для GET /api/orders — {items, total} по аналогии с TicketListResponse."
+      },
+      "OrderPersonBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "OrderPersonBrief",
+        "description": "Вложенный автор/согласующий — минимальный набор полей для отображения."
+      },
+      "OrderRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DocumentTemplateType"
+          },
+          "template": {
+            "$ref": "#/components/schemas/OrderTemplateBrief"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "author": {
+            "$ref": "#/components/schemas/OrderPersonBrief"
+          },
+          "approver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderPersonBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "template",
+          "fields",
+          "status",
+          "author",
+          "approver",
+          "created_at",
+          "approved_at",
+          "version"
+        ],
+        "title": "OrderRead"
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "pending_approval",
+          "approved",
+          "executed",
+          "rejected"
+        ],
+        "title": "OrderStatus"
+      },
+      "OrderTemplateBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DocumentTemplateType"
+          },
+          "field_schema": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Field Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "field_schema"
+        ],
+        "title": "OrderTemplateBrief",
+        "description": "Вложенный шаблон документа — без file_path (внутренняя деталь рендера)."
+      },
+      "OrderUpdate": {
+        "properties": {
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OrderUpdate",
+        "description": "Частичное обновление — используется PATCH-эндпоинтом.\n\nfields — правка автора (допустима в draft; в pending_approval вызывает\n    сброс в draft и инкремент version в order_service).\nstatus — переход, инициированный либо автором (pending_approval),\n    либо согласующим (approved/rejected), либо исполнителем (executed).\n    Валидность конкретного перехода для конкретной роли проверяется\n    в order_service, а не на уровне схемы."
       },
       "RepairBrief": {
         "properties": {

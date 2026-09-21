@@ -1,5 +1,5 @@
 """
-Тесты /api/orders (п. 3.6, 4.4 ТЗ, раздел 8 ТЗ, сессия B14):
+Тесты /api/orders (п. 3.6, 4.4 ТЗ, раздел 8 ТЗ, сессии B14, B14a, B16):
 - создание черновика (POST), status всегда draft, version всегда 1
 - версионирование: правка fields в draft не меняет version; правка после
   pending_approval сбрасывает в draft, version += 1, старая версия
@@ -11,14 +11,18 @@
   DocumentTemplate.min_approver_role (регрессия на баг, найденный в
   ручном тестировании B14 — шаблон с min_approver_role=Engineer не должен
   разрешать Engineer согласовывать документ)
-- ранжировка согласующих: IT-Head не может согласовать документ с порогом
-  Executive, но Executive может согласовать документ с порогом IT-Head
+- ранжировка согласующих: IT-Head не может согласовывать документ с порогом
+  Executive, но Executive может согласовывать документ с порогом IT-Head
 - доступ по ролям на уровне роутера: User — 403
-- фильтр по status в GET /api/orders
+- фильтры по status и type, пагинация в GET /api/orders
 - 404 на несуществующий order_id
+- B16: ветка reject, недопустимые переходы FSM (409), правка fields в
+  терминальных статусах (409), права не-автора и Admin, комбинированный PATCH
+  (fields + status), сквозное версионирование
 """
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -391,7 +395,6 @@ def test_order_history_empty_for_never_edited_order(
     response = client.get(
         f"/api/orders/{order['id']}/history", headers=_auth_headers(engineer_user)
     )
-
     assert response.status_code == 200
     assert response.json() == []
 
@@ -404,3 +407,317 @@ def test_order_history_not_found_for_unknown_order_id(
     )
 
     assert response.status_code == 404
+
+
+# --- B16: добор покрытия жизненного цикла и прав (раздел 8 ТЗ) ---
+
+
+def _order_in_status(
+    client: TestClient,
+    db_session: Session,
+    department: Department,
+    author: User,
+    template: DocumentTemplate,
+    target: str,
+) -> dict:
+    """Проводит новый Order по легальному пути FSM до нужного статуса.
+
+    Каждый шаг проверяется на 200, чтобы ошибка подготовки не маскировалась под
+    результат самого теста. Возвращает исходный dict заказа (id не меняется)."""
+    order = _create_order(client, author, template)
+    if target == "draft":
+        return order
+
+    author_headers = _auth_headers(author)
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": "pending_approval"}, headers=author_headers
+    )
+    assert response.status_code == 200
+    if target == "pending_approval":
+        return order
+
+    approver = _make_user(db_session, department, UserRole.IT_HEAD)
+    resolution = "rejected" if target == "rejected" else "approved"
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": resolution}, headers=_auth_headers(approver)
+    )
+    assert response.status_code == 200
+    if target in ("approved", "rejected"):
+        return order
+
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": "executed"}, headers=author_headers
+    )
+    assert response.status_code == 200
+    return order
+
+
+def test_it_head_can_reject_and_approved_at_stays_empty(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    template = _make_template(db_session, min_approver_role=UserRole.IT_HEAD)
+    order = _order_in_status(client, db_session, department, engineer_user, template, "pending_approval")
+    it_head = _make_user(db_session, department, UserRole.IT_HEAD)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": "rejected"}, headers=_auth_headers(it_head)
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "rejected"
+    assert body["approver"]["id"] == str(it_head.id)
+    assert body["approved_at"] is None
+
+
+def test_it_head_cannot_reject_when_template_requires_executive(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    """Порог Executive действует и на reject, не только на approve (общая ветка _can_approve)."""
+    template = _make_template(db_session, min_approver_role=UserRole.EXECUTIVE)
+    order = _order_in_status(client, db_session, department, engineer_user, template, "pending_approval")
+    it_head = _make_user(db_session, department, UserRole.IT_HEAD)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": "rejected"}, headers=_auth_headers(it_head)
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("role", "target"),
+    [
+        (UserRole.ADMIN, "approved"),
+        (UserRole.ADMIN, "rejected"),
+        (UserRole.ENGINEER, "rejected"),
+    ],
+)
+def test_role_outside_approvers_cannot_resolve_order(
+    client: TestClient,
+    db_session: Session,
+    department: Department,
+    engineer_user: User,
+    role: UserRole,
+    target: str,
+) -> None:
+    """Раздел 8 ТЗ: согласует/отклоняет только IT-Head или Executive. Admin проходит
+    доступ к роутеру, но в _APPROVER_RANKS его нет — итоговый отказ на уровне сервиса."""
+    template = _make_template(db_session, min_approver_role=UserRole.IT_HEAD)
+    order = _order_in_status(client, db_session, department, engineer_user, template, "pending_approval")
+    outsider = _make_user(db_session, department, role)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": target}, headers=_auth_headers(outsider)
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    [
+        ("draft", "approved"),
+        ("draft", "rejected"),
+        ("draft", "executed"),
+        ("pending_approval", "executed"),
+        ("approved", "rejected"),
+        ("approved", "pending_approval"),
+        ("rejected", "approved"),
+        ("rejected", "pending_approval"),
+        ("executed", "rejected"),
+    ],
+)
+def test_transition_outside_fsm_returns_409(
+    client: TestClient,
+    db_session: Session,
+    department: Department,
+    engineer_user: User,
+    current: str,
+    target: str,
+) -> None:
+    template = _make_template(db_session)
+    order = _order_in_status(client, db_session, department, engineer_user, template, current)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}",
+        json={"status": target},
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 409
+
+
+@pytest.mark.parametrize("current", ["approved", "rejected", "executed"])
+def test_edit_fields_outside_editable_statuses_returns_409(
+    client: TestClient,
+    db_session: Session,
+    department: Department,
+    engineer_user: User,
+    current: str,
+) -> None:
+    template = _make_template(db_session)
+    order = _order_in_status(client, db_session, department, engineer_user, template, current)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}",
+        json={"fields": {"field": "правка после решения"}},
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 409
+
+
+def test_non_author_cannot_submit_for_approval(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    order = _create_order(client, engineer_user, template)
+    other_engineer = _make_user(db_session, department, UserRole.ENGINEER)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}",
+        json={"status": "pending_approval"},
+        headers=_auth_headers(other_engineer),
+    )
+
+    assert response.status_code == 403
+
+
+def test_approver_cannot_mark_order_executed(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    """Исполнение отмечает только автор (допущение B14), а не согласующий."""
+    template = _make_template(db_session, min_approver_role=UserRole.IT_HEAD)
+    order = _order_in_status(client, db_session, department, engineer_user, template, "approved")
+    it_head = _make_user(db_session, department, UserRole.IT_HEAD)
+
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"status": "executed"}, headers=_auth_headers(it_head)
+    )
+
+    assert response.status_code == 403
+
+
+def test_combined_patch_in_draft_edits_fields_and_submits_without_version_bump(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    order = _create_order(client, engineer_user, template, fields={"field": "старое"})
+
+    response = client.patch(
+        f"/api/orders/{order['id']}",
+        json={"fields": {"field": "новое"}, "status": "pending_approval"},
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "pending_approval"
+    assert body["version"] == 1
+    assert body["fields"] == {"field": "новое"}
+    history_count = (
+        db_session.query(OrderHistory)
+        .filter(OrderHistory.order_id == uuid.UUID(order["id"]))
+        .count()
+    )
+    assert history_count == 0
+
+
+def test_combined_patch_in_pending_approval_archives_and_resubmits(
+    client: TestClient, db_session: Session, department: Department, engineer_user: User
+) -> None:
+    """Правка fields + status=pending_approval одним PATCH из pending_approval:
+    старая версия архивируется, version=2, итоговый статус снова pending_approval."""
+    template = _make_template(db_session)
+    order = _order_in_status(client, db_session, department, engineer_user, template, "pending_approval")
+
+    response = client.patch(
+        f"/api/orders/{order['id']}",
+        json={"fields": {"field": "доработано"}, "status": "pending_approval"},
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "pending_approval"
+    assert body["version"] == 2
+    history = (
+        db_session.query(OrderHistory)
+        .filter(OrderHistory.order_id == uuid.UUID(order["id"]))
+        .one()
+    )
+    assert history.version == 1
+    assert history.fields == {"field": "значение"}
+
+
+def test_version_reaches_3_after_two_rework_cycles(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    order = _create_order(client, engineer_user, template, fields={"field": "v1"})
+    headers = _auth_headers(engineer_user)
+
+    client.patch(f"/api/orders/{order['id']}", json={"status": "pending_approval"}, headers=headers)
+    client.patch(f"/api/orders/{order['id']}", json={"fields": {"field": "v2"}}, headers=headers)
+    client.patch(f"/api/orders/{order['id']}", json={"status": "pending_approval"}, headers=headers)
+    response = client.patch(
+        f"/api/orders/{order['id']}", json={"fields": {"field": "v3"}}, headers=headers
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == 3
+    assert body["status"] == "draft"
+
+
+def test_list_orders_filters_by_type(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    purchase_template = _make_template(db_session, type_=DocumentTemplateType.PURCHASE_REQUEST)
+    work_template = _make_template(db_session, type_=DocumentTemplateType.WORK_ORDER)
+    purchase_order = _create_order(client, engineer_user, purchase_template)
+    _create_order(client, engineer_user, work_template)
+    _create_order(client, engineer_user, work_template)
+
+    response = client.get(
+        f"/api/orders?type={DocumentTemplateType.PURCHASE_REQUEST.value}",
+        headers=_auth_headers(engineer_user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == purchase_order["id"]
+
+
+def test_list_orders_pagination(
+    client: TestClient, db_session: Session, engineer_user: User
+) -> None:
+    template = _make_template(db_session)
+    for _ in range(3):
+        _create_order(client, engineer_user, template)
+    headers = _auth_headers(engineer_user)
+
+    page_1 = client.get("/api/orders?page=1&page_size=2", headers=headers).json()
+    page_2 = client.get("/api/orders?page=2&page_size=2", headers=headers).json()
+
+    assert page_1["total"] == 3
+    assert page_2["total"] == 3
+    assert len(page_1["items"]) == 2
+    assert len(page_2["items"]) == 1
+    ids_1 = {item["id"] for item in page_1["items"]}
+    ids_2 = {item["id"] for item in page_2["items"]}
+    assert ids_1.isdisjoint(ids_2)
+
+
+def test_executive_can_list_orders(
+    client: TestClient, db_session: Session, department: Department
+) -> None:
+    """Executive явно включён в доступ к роутеру (докстринг api/orders.py) —
+    иначе он не смог бы дойти до согласования."""
+    executive = _make_user(db_session, department, UserRole.EXECUTIVE)
+
+    response = client.get("/api/orders", headers=_auth_headers(executive))
+
+    assert response.status_code == 200
